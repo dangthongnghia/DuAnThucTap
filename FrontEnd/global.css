@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base Colors - Light Mode */
+    --background: 255 100% 100%;
+    /* Pure White */
+    --foreground: 240 10% 3.9%;
+    /* Dark Grey */
+
+    /* Card & Surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    /* Primary Brand Color - Vibrant Violet/Purple */
+    --primary: 262 83% 58%;
+    /* #7F3DFF */
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary - Soft Blue/Grey */
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    /* Muted/Neutral */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    /* Accent - For highlights */
+    --accent: 262 83% 96%;
+    /* Very light purple */
+    --accent-foreground: 262 83% 58%;
+
+    /* Destructive - Red */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders & Inputs */
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 262 83% 58%;
+
+    /* Radius */
+    --radius: 1rem;
+    /* 16px for modern rounded look */
+
+    /* Chart Colors */
+    --chart-1: 262 83% 58%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    /* Base Colors - Dark Mode - Deep Blue/Grey Background */
+    --background: 224 71% 4%;
+    /* Very dark blue-ish grey */
+    --foreground: 210 40% 98%;
+
+    /* Card & Surfaces - Slightly lighter than bg */
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary */
+    --primary: 263 70% 50%;
+    /* Slightly darker purple for contrast */
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary */
+    --secondary: 217 19% 27%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 217 19% 27%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    /* Accent */
+    --accent: 217 19% 27%;
+    --accent-foreground: 210 40% 98%;
+
+    /* Destructive */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders */
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 263 70% 50%;
+
+    /* Chart Colors Dark */
+    --chart-1: 262 83% 58%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+}

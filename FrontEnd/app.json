@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "EasyFin",
+    "scheme": "quanlytaichinh",
+    "slug": "money-manager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo-icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.begin2"
+    },
+    "android": {
+      "package": "com.yourcompany.nasteam",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/logo-icon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f4da390c-f4d7-4750-adf5-ba3379b75367"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser"
+    ]
+  }
+}

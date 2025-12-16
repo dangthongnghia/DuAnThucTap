@@ -1,0 +1,13 @@
+{
+  "color": {
+    "primary": { "value": "#1563d7" },
+    "onPrimary": { "value": "#ffffff" },
+    "secondary": { "value": "#9ca3af" },
+    "bg": { "value": "#f3f4f6" }
+  },
+  "font": {
+    "family": { "value": "Inter" },
+    "size": { "sm": { "value": 14 }, "md": { "value": 16 }, "lg": { "value": 18 } }
+  },
+  "radius": { "md": { "value": 12 }, "xl": { "value": 999 } }
+}
