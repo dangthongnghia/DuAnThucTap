@@ -1,12 +1,28 @@
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
-import { DataProvider } from '../contexts/DataContext';
+import { DataProvider, useData } from '../contexts/DataContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 import '../global.css';
+import UndoSnackbar from '../components/ui/UndoSnackbar';
+
+function RootLayoutNav() {
+  const { showUndoSnackbar, undoDelete } = useData();
+
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      <UndoSnackbar
+        visible={showUndoSnackbar}
+        onUndo={undoDelete}
+        message="Transaction deleted"
+      />
+    </>
+  );
+}
 
 export default function RootLayout() {
   return (
@@ -16,7 +32,7 @@ export default function RootLayout() {
           <ThemeProvider>
             <DataProvider>
               <AuthProvider>
-                <Stack screenOptions={{ headerShown: false }} />
+                <RootLayoutNav />
               </AuthProvider>
             </DataProvider>
           </ThemeProvider>

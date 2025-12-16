@@ -3,8 +3,7 @@ import { View, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Pl
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Typography } from '../../components/ui/Typography';
-import { Button } from '../../components/ui/Button';
-import { useTransactions } from '../../contexts/TransactionProvider';
+import { Button } from '../../components/ui/Button';import { useData } from '../../contexts/DataContext';
 import { CategorySelectorModal } from '../../components/Modal/CategorySelectorModal';
 import { PaymentMethodSelectorModal } from '../../components/Modal/PaymentMethodSelectorModal';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -16,7 +15,7 @@ type TransactionType = 'expense' | 'income';
 export default function AddOrEditScreen() {
   const { id, type } = useLocalSearchParams<{ id?: string; type?: string }>();
   const router = useRouter();
-  const { addTransaction, updateTransaction, transactions } = useTransactions();
+  const { addTransaction, updateTransaction, transactions } = useData();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
 
@@ -52,6 +51,12 @@ export default function AddOrEditScreen() {
   const [isCategorySelectorVisible, setCategorySelectorVisible] = useState(false);
   const [isPaymentSelectorVisible, setPaymentSelectorVisible] = useState(false);
 
+  const resetFormForNewTransaction = () => {
+    setAmount('');
+    setCategory('');
+    setNote('');
+  };
+
   const handleAmountChange = (value: string) => {
     setAmount(formatCurrency(value));
   };
@@ -69,6 +74,7 @@ export default function AddOrEditScreen() {
       }
 
       const transactionData = {
+        title: category,
         amount: parseCurrency(amount),
         category,
         date: date.toISOString(),
@@ -79,11 +85,11 @@ export default function AddOrEditScreen() {
 
       if (isEditing && existingTransaction) {
         await updateTransaction(existingTransaction.id, transactionData);
+        router.back();
       } else {
         await addTransaction(transactionData);
+        resetFormForNewTransaction();
       }
-
-      router.back();
     } catch (error) {
       console.error('Error saving transaction:', error);
       alert('Failed to save transaction');
@@ -113,26 +119,46 @@ export default function AddOrEditScreen() {
           {/* Type Selector */}
           <View className="mx-6 mt-6 p-1 bg-secondary rounded-2xl flex-row">
             <TouchableOpacity
-              className={`flex-1 py-3 rounded-xl items-center ${
-                transactionType === 'expense' ? 'bg-red-500 shadow-sm' : ''
-              }`}
+              style={
+                transactionType === 'expense'
+                  ? {
+                      backgroundColor: '#ef4444', // bg-red-500
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 1.41,
+                      elevation: 2,
+                    }
+                  : {}
+              }
+              className={'flex-1 py-3 rounded-xl items-center'}
               onPress={() => setTransactionType('expense')}
             >
-              <Typography 
-                variant="body" 
+              <Typography
+                variant="body"
                 className={transactionType === 'expense' ? 'text-white font-semibold' : 'text-muted-foreground'}
               >
                 Expense
               </Typography>
             </TouchableOpacity>
             <TouchableOpacity
-              className={`flex-1 py-3 rounded-xl items-center ${
-                transactionType === 'income' ? 'bg-green-500 shadow-sm' : ''
-              }`}
+              style={
+                transactionType === 'income'
+                  ? {
+                      backgroundColor: '#22c55e', // bg-green-500
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 1.41,
+                      elevation: 2,
+                    }
+                  : {}
+              }
+              className={'flex-1 py-3 rounded-xl items-center'}
               onPress={() => setTransactionType('income')}
             >
-              <Typography 
-                variant="body" 
+              <Typography
+                variant="body"
                 className={transactionType === 'income' ? 'text-white font-semibold' : 'text-muted-foreground'}
               >
                 Income
@@ -183,7 +209,7 @@ export default function AddOrEditScreen() {
             />
 
             <View className="flex-row items-center bg-card p-4 rounded-2xl border border-border">
-              <View className="mr-4 bg-primary/10 p-2 rounded-full">
+              <View style={{ backgroundColor: 'hsla(262, 83%, 58%, 0.1)' }} className="mr-4 p-2 rounded-full">
                 <FileText size={24} color={theme.primary} />
               </View>
               <TextInput
@@ -255,9 +281,9 @@ const FormItem = ({
 }) => (
   <TouchableOpacity
     onPress={onPress}
-    className="flex-row items-center bg-card p-4 rounded-2xl border border-border active:bg-secondary/50"
+    className="flex-row items-center bg-card p-4 rounded-2xl border border-border active:bg-secondary"
   >
-    <View className="mr-4 bg-primary/10 p-2 rounded-full">
+    <View style={{ backgroundColor: 'hsla(262, 83%, 58%, 0.1)' }} className="mr-4 p-2 rounded-full">
       {icon}
     </View>
     <View className="flex-1">

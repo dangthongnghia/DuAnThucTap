@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
@@ -6,16 +6,18 @@ import { Typography } from '../../components/ui/Typography';
 import { Card } from '../../components/ui/Card';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Bell, TrendingUp, TrendingDown, Wallet } from 'lucide-react-native';
+import { Bell, TrendingUp, TrendingDown, Wallet, ArrowUpDown } from 'lucide-react-native';
 import { formatCurrency } from '../../utils/currency';
 import { Colors } from '../../constants/Colors';
+import { SwipeableTransactionItem } from '../../components/Transaction';
 
 export default function HomeScreen() {
-  const { transactions, loading } = useData();
+  const { transactions, loading, deleteTransaction } = useData();
   const { user } = useAuth();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
 
   const income = transactions
     .filter(t => t.type === 'income')
@@ -33,6 +35,18 @@ export default function HomeScreen() {
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
+
+  const recentTransactions = useMemo(() => {
+    const data = [...transactions];
+    if (sortBy === 'amount') {
+      // Sắp xếp theo số tiền giảm dần
+      data.sort((a, b) => b.amount - a.amount);
+    } else {
+      // Sắp xếp theo ngày giảm dần (mặc định)
+      data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    return data.slice(0, 5);
+  }, [transactions, sortBy]);
 
   if (loading) {
     return (
@@ -105,36 +119,29 @@ export default function HomeScreen() {
         <View className="px-6">
           <View className="flex-row justify-between items-center mb-4">
             <Typography variant="h4">Recent Activity</Typography>
-            <TouchableOpacity onPress={() => router.push('/transaction')}>
-              <Typography variant="body" className="text-primary font-medium">See all</Typography>
-            </TouchableOpacity>
+            <View className="flex-row items-center gap-3">
+              <TouchableOpacity
+                onPress={() => setSortBy(prev => prev === 'date' ? 'amount' : 'date')}
+                className="flex-row items-center bg-slate-700 px-3 py-1.5 rounded-full"
+              >
+                <ArrowUpDown size={14} color={theme.foreground} />
+                <Typography variant="caption" className="ml-1 font-medium">
+                  {sortBy === 'date' ? 'Date' : 'Amount'}
+                </Typography>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/transaction')}>
+                <Typography variant="body" className="text-primary font-medium">See all</Typography>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View className="space-y-3">
-            {transactions.slice(0, 5).map((t) => (
-              <Card key={t.id} className="flex-row items-center justify-between p-4">
-                <View className="flex-row items-center gap-4">
-                  <View className={`h-12 w-12 rounded-full items-center justify-center ${t.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
-                    }`}>
-                    <Typography variant="h4">
-                      {t.type === 'income' ? '💰' : '💸'}
-                    </Typography>
-                  </View>
-                  <View>
-                    <Typography variant="body" className="font-semibold">{t.category}</Typography>
-                    <Typography variant="caption">{t.note || 'No description'}</Typography>
-                  </View>
-                </View>
-                <View className="items-end">
-                  <Typography
-                    variant="body"
-                    className={`font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                  </Typography>
-                  <Typography variant="caption">{new Date(t.date).toLocaleDateString()}</Typography>
-                </View>
-              </Card>
+            {recentTransactions.map((item) => (
+              <SwipeableTransactionItem
+                key={item.id}
+                item={item}
+                onDelete={deleteTransaction}
+              />
             ))}
 
             {transactions.length === 0 && (

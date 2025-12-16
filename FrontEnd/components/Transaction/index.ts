@@ -3,3 +3,4 @@ export { TitleInput } from './TitleInput';
 export { DateTimePickerComponent } from './DateTimePickerComponent';
 export { NoteInput } from './NoteInput';
 export { SubmitButton } from './SubmitButton';
+export { default as SwipeableTransactionItem } from './SwipeableTransactionItem';
