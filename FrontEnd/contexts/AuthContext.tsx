@@ -3,10 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import storageService from '../services/storageService';
 
 interface User {
+  id?: string;
   name: string;
   email: string;
   picture: string;
-  // Add other user properties if needed
+  role?: string;
 }
 
 interface AuthContextType {
