@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-
-// Mock database - Thay thế bằng database thật trong production
-const mockUsers: Array<{
-  id: string;
-  email: string;
-  password: string;
-  name: string;
-  role: string;
-  createdAt: Date;
-}> = [];
+import prisma from "@/lib/prisma";
 
 interface RegisterRequest {
   email: string;
@@ -68,9 +59,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Kiểm tra email đã tồn tại chưa
-    const existingUser = mockUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
 
     if (existingUser) {
       return NextResponse.json(
@@ -87,27 +78,40 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Tạo user mới
-    const newUser = {
-      id: Date.now().toString(),
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      name: name.trim(),
-      role: "user",
-      createdAt: new Date(),
-    };
+    const newUser = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        name: name.trim(),
+        role: "user",
+      },
+    });
 
-    // Lưu vào database (mock)
-    mockUsers.push(newUser);
-
-    // Response thành công (không trả về password)
-    const { password: _, ...userWithoutPassword } = newUser;
+    // Tạo tài khoản mặc định cho user mới
+    await prisma.account.create({
+      data: {
+        userId: newUser.id,
+        name: "Ví tiền mặt",
+        type: "CASH",
+        balance: 0,
+        currency: "VND",
+        icon: "💵",
+        color: "#4CAF50",
+      },
+    });
 
     return NextResponse.json(
       {
         success: true,
         message: "Đăng ký thành công",
         data: {
-          user: userWithoutPassword,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            name: newUser.name,
+            role: newUser.role,
+            createdAt: newUser.createdAt,
+          },
         },
       },
       { status: 201 }

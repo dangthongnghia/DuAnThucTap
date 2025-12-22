@@ -1,0 +1,279 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  avatar    String?
+  role      String   @default("user") // user, admin
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts              Account[]
+  transactions          Transaction[]
+  budgets               Budget[]
+  categories            Category[]
+  notifications         Notification[]
+  recurringTransactions RecurringTransaction[]
+  transfers             Transfer[]
+
+  @@map("users")
+}
+
+// ============================================
+// ACCOUNT MODEL (Tài khoản tài chính)
+// ============================================
+model Account {
+  id          String      @id @default(cuid())
+  userId      String
+  name        String
+  type        AccountType @default(CASH)
+  balance     Decimal     @default(0) @db.Decimal(15, 2)
+  currency    String      @default("VND")
+  icon        String?
+  color       String?
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+  transfersFrom     Transfer[]    @relation("TransferFrom")
+  transfersTo       Transfer[]    @relation("TransferTo")
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+enum AccountType {
+  CASH
+  BANK
+  CREDIT_CARD
+  DEBIT_CARD
+  E_WALLET
+  INVESTMENT
+  SAVINGS
+  LOAN
+  OTHER
+}
+
+// ============================================
+// CATEGORY MODEL (Danh mục)
+// ============================================
+model Category {
+  id        String          @id @default(cuid())
+  userId    String?         // null = system category, có userId = custom category
+  name      String
+  icon      String?
+  color     String?
+  type      TransactionType // income, expense, both
+  keywords  String[]        // Cho smart suggestions
+  isSystem  Boolean         @default(false)
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Relations
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([userId, name, type])
+  @@index([userId])
+  @@index([type])
+  @@map("categories")
+}
+
+// ============================================
+// TRANSACTION MODEL (Giao dịch)
+// ============================================
+model Transaction {
+  id            String          @id @default(cuid())
+  userId        String
+  accountId     String?
+  categoryId    String?
+  title         String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(15, 2)
+  date          DateTime
+  note          String?
+  paymentMethod String?
+  receiptImage  String?
+  attachments   String[]
+  recurringId   String?         // Link to recurring transaction
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account?              @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category  Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  recurring RecurringTransaction? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([date])
+  @@index([type])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+// ============================================
+// TRANSFER MODEL (Chuyển tiền giữa tài khoản)
+// ============================================
+model Transfer {
+  id            String   @id @default(cuid())
+  userId        String
+  fromAccountId String
+  toAccountId   String
+  amount        Decimal  @db.Decimal(15, 2)
+  fee           Decimal  @default(0) @db.Decimal(15, 2)
+  note          String?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAccount Account @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccount   Account @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@map("transfers")
+}
+
+// ============================================
+// BUDGET MODEL (Ngân sách)
+// ============================================
+model Budget {
+  id         String       @id @default(cuid())
+  userId     String
+  categoryId String?
+  name       String
+  amount     Decimal      @db.Decimal(15, 2)
+  spent      Decimal      @default(0) @db.Decimal(15, 2)
+  period     BudgetPeriod @default(MONTHLY)
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@map("budgets")
+}
+
+enum BudgetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ============================================
+// RECURRING TRANSACTION MODEL (Giao dịch định kỳ)
+// ============================================
+model RecurringTransaction {
+  id              String             @id @default(cuid())
+  userId          String
+  name            String
+  type            TransactionType
+  category        String
+  amount          Decimal            @db.Decimal(15, 2)
+  description     String?
+  frequency       RecurringFrequency
+  interval        Int                @default(1) // e.g., every 1 month, every 2 weeks
+  startDate       DateTime
+  endDate         DateTime?
+  nextDate        DateTime
+  lastCreatedDate DateTime?
+  isActive        Boolean            @default(true)
+  notifyBefore    Int?               // Notify X days before
+  autoCreate      Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([nextDate])
+  @@map("recurring_transactions")
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ============================================
+// NOTIFICATION MODEL (Thông báo)
+// ============================================
+model Notification {
+  id        String               @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType     @default(INFO)
+  category  NotificationCategory @default(SYSTEM)
+  data      Json?                // Extra data as JSON
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
+
+enum NotificationCategory {
+  TRANSACTION
+  BUDGET
+  RECURRING
+  ACCOUNT
+  REPORT
+  SYSTEM
+  REMINDER
+}
