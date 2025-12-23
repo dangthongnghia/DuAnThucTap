@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -85,7 +85,7 @@ model Category {
   icon      String?
   color     String?
   type      TransactionType // income, expense, both
-  keywords  String[]        // Cho smart suggestions
+  keywords  Json?        // Cho smart suggestions
   isSystem  Boolean         @default(false)
   isActive  Boolean         @default(true)
   createdAt DateTime        @default(now())
@@ -117,7 +117,7 @@ model Transaction {
   note          String?
   paymentMethod String?
   receiptImage  String?
-  attachments   String[]
+  attachments   Json?
   recurringId   String?         // Link to recurring transaction
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

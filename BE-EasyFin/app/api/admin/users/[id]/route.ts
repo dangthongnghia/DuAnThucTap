@@ -17,11 +17,17 @@ interface UpdateUserRequest {
  */
 async function handleGet(
   request: NextRequest,
-  user: JwtPayload,
-  { params }: { params: Promise<{ id: string }> }
+  _user: JwtPayload,
+  context?: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    if (!context) {
+      return NextResponse.json(
+        { success: false, message: "Missing context" },
+        { status: 400 }
+      );
+    }
+    const { id } = await context.params;
 
     const targetUser = await prisma.user.findUnique({
       where: { id },
@@ -113,11 +119,17 @@ async function handleGet(
  */
 async function handlePut(
   request: NextRequest,
-  user: JwtPayload,
-  { params }: { params: Promise<{ id: string }> }
+  _user: JwtPayload,
+  context?: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    if (!context) {
+      return NextResponse.json(
+        { success: false, message: "Missing context" },
+        { status: 400 }
+      );
+    }
+    const { id } = await context.params;
     const body: UpdateUserRequest = await request.json();
     const { name, email, password, role, isActive, avatar } = body;
 
@@ -207,10 +219,16 @@ async function handlePut(
 async function handleDelete(
   request: NextRequest,
   user: JwtPayload,
-  { params }: { params: Promise<{ id: string }> }
+  context?: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    if (!context) {
+      return NextResponse.json(
+        { success: false, message: "Missing context" },
+        { status: 400 }
+      );
+    }
+    const { id } = await context.params;
 
     // Không cho xóa chính mình
     if (id === user.userId) {
@@ -265,10 +283,16 @@ async function handleDelete(
 async function handlePatch(
   request: NextRequest,
   user: JwtPayload,
-  { params }: { params: Promise<{ id: string }> }
+  context?: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    if (!context) {
+      return NextResponse.json(
+        { success: false, message: "Missing context" },
+        { status: 400 }
+      );
+    }
+    const { id } = await context.params;
     const body = await request.json();
     const { action } = body;
 
@@ -360,7 +384,7 @@ async function handlePatch(
 }
 
 // Export với admin role check
-export const GET = withRole(handleGet, ["admin"]);
-export const PUT = withRole(handlePut, ["admin"]);
-export const DELETE = withRole(handleDelete, ["admin"]);
-export const PATCH = withRole(handlePatch, ["admin"]);
+export const GET = withRole(["admin"], handleGet);
+export const PUT = withRole(["admin"], handlePut);
+export const DELETE = withRole(["admin"], handleDelete);
+export const PATCH = withRole(["admin"], handlePatch);

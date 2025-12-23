@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth, withRole, JwtPayload } from "@/lib/auth";
+import { withRole } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma, NotificationType, NotificationCategory } from "@prisma/client";
 
 /**
  * GET /api/admin/notifications - Lấy danh sách thông báo (chỉ admin)
  */
-async function handleGet(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handleGet(request: NextRequest, _user?: unknown) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -15,14 +17,14 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
 
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.NotificationWhereInput = {};
 
-    if (type) {
-      where.type = type;
+    if (type && Object.values(NotificationType).includes(type as NotificationType)) {
+      where.type = type as NotificationType;
     }
 
-    if (category) {
-      where.category = category;
+    if (category && Object.values(NotificationCategory).includes(category as NotificationCategory)) {
+      where.category = category as NotificationCategory;
     }
 
     const [notifications, total] = await Promise.all([
@@ -80,7 +82,8 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
 /**
  * POST /api/admin/notifications - Gửi thông báo mới đến users
  */
-async function handlePost(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handlePost(request: NextRequest, _user?: unknown) {
   try {
     const body = await request.json();
     const { title, message, type, category, targetUsers } = body;
@@ -136,7 +139,8 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
 /**
  * DELETE /api/admin/notifications - Xóa thông báo
  */
-async function handleDelete(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handleDelete(request: NextRequest, _user?: unknown) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -163,6 +167,6 @@ async function handleDelete(request: NextRequest, user: JwtPayload) {
   }
 }
 
-export const GET = withAuth(withRole(handleGet, ["admin"]));
-export const POST = withAuth(withRole(handlePost, ["admin"]));
-export const DELETE = withAuth(withRole(handleDelete, ["admin"]));
+export const GET = withRole(["admin"], handleGet);
+export const POST = withRole(["admin"], handlePost);
+export const DELETE = withRole(["admin"], handleDelete);

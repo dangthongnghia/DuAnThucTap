@@ -197,5 +197,5 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
 }
 
 // Export với admin role check
-export const GET = withRole(handleGet, ["admin"]);
-export const POST = withRole(handlePost, ["admin"]);
+export const GET = withRole(["admin"], handleGet);
+export const POST = withRole(["admin"], handlePost);

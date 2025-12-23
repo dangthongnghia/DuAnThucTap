@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth, withRole, JwtPayload } from "@/lib/auth";
+import { withRole } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma, TransactionType } from "@prisma/client";
 
 /**
  * GET /api/admin/categories - Lấy danh sách danh mục (chỉ admin)
  */
-async function handleGet(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handleGet(request: NextRequest, _user?: unknown) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "";
 
-    const where: any = {};
+    const where: Prisma.CategoryWhereInput = {};
 
-    if (type) {
-      where.type = type;
+    if (type && Object.values(TransactionType).includes(type as TransactionType)) {
+      where.type = type as TransactionType;
     }
 
     const categories = await prisma.category.findMany({
@@ -60,7 +62,8 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
 /**
  * POST /api/admin/categories - Tạo danh mục mới
  */
-async function handlePost(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handlePost(request: NextRequest, _user?: unknown) {
   try {
     const body = await request.json();
     const { name, icon, color, type } = body;
@@ -100,7 +103,8 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
 /**
  * PUT /api/admin/categories - Cập nhật danh mục
  */
-async function handlePut(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handlePut(request: NextRequest, _user?: unknown) {
   try {
     const body = await request.json();
     const { id, name, icon, color, isActive } = body;
@@ -139,7 +143,8 @@ async function handlePut(request: NextRequest, user: JwtPayload) {
 /**
  * DELETE /api/admin/categories - Xóa danh mục
  */
-async function handleDelete(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handleDelete(request: NextRequest, _user?: unknown) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -175,7 +180,7 @@ async function handleDelete(request: NextRequest, user: JwtPayload) {
   }
 }
 
-export const GET = withAuth(withRole(handleGet, ["admin"]));
-export const POST = withAuth(withRole(handlePost, ["admin"]));
-export const PUT = withAuth(withRole(handlePut, ["admin"]));
-export const DELETE = withAuth(withRole(handleDelete, ["admin"]));
+export const GET = withRole(["admin"], handleGet);
+export const POST = withRole(["admin"], handlePost);
+export const PUT = withRole(["admin"], handlePut);
+export const DELETE = withRole(["admin"], handleDelete);

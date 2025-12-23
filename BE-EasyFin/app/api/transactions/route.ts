@@ -55,7 +55,7 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
 
     if (category) {
       where.category = {
-        name: { equals: category, mode: "insensitive" },
+        name: category,
       };
     }
 
@@ -81,8 +81,8 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
 
     if (search) {
       where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { note: { contains: search, mode: "insensitive" } },
+        { title: { contains: search } },
+        { note: { contains: search } },
       ];
     }
 
@@ -202,10 +202,10 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
       );
     }
 
-    // Tìm hoặc tạo category
+    // Tìm hoặc tạo category - MySQL mặc định case-insensitive
     let categoryRecord = await prisma.category.findFirst({
       where: {
-        name: { equals: category, mode: "insensitive" },
+        name: category,
         type: transactionType,
         OR: [
           { isSystem: true },

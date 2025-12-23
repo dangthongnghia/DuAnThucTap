@@ -105,4 +105,4 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
   }
 }
 
-export const GET = withAuth(withRole(handleGet, ["admin"]));
+export const GET = withRole(["admin"], handleGet);

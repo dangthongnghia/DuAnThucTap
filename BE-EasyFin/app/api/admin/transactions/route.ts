@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth, withRole, JwtPayload } from "@/lib/auth";
+import { withRole } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma, TransactionType } from "@prisma/client";
 
 /**
  * GET /api/admin/transactions - Lấy danh sách giao dịch (chỉ admin)
  */
-async function handleGet(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handleGet(request: NextRequest, _user?: unknown) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -21,14 +23,14 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.TransactionWhereInput = {};
 
     if (search) {
-      where.title = { contains: search, mode: "insensitive" };
+      where.title = { contains: search };
     }
 
-    if (type) {
-      where.type = type;
+    if (type && Object.values(TransactionType).includes(type as TransactionType)) {
+      where.type = type as TransactionType;
     }
 
     if (categoryId) {
@@ -36,11 +38,11 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
     }
 
     if (fromDate) {
-      where.date = { ...where.date, gte: new Date(fromDate) };
+      where.date = { ...(where.date as object), gte: new Date(fromDate) };
     }
 
     if (toDate) {
-      where.date = { ...where.date, lte: new Date(toDate) };
+      where.date = { ...(where.date as object), lte: new Date(toDate) };
     }
 
     // Get transactions with relations
@@ -101,7 +103,8 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
 /**
  * DELETE /api/admin/transactions - Xóa giao dịch theo ID
  */
-async function handleDelete(request: NextRequest, user: JwtPayload) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function handleDelete(request: NextRequest, _user?: unknown) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -128,5 +131,5 @@ async function handleDelete(request: NextRequest, user: JwtPayload) {
   }
 }
 
-export const GET = withAuth(withRole(handleGet, ["admin"]));
-export const DELETE = withAuth(withRole(handleDelete, ["admin"]));
+export const GET = withRole(["admin"], handleGet);
+export const DELETE = withRole(["admin"], handleDelete);
