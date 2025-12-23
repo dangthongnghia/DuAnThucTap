@@ -245,4 +245,4 @@ async function getDailyStats(startDate: Date, endDate: Date) {
 }
 
 // Export với admin role check
-export const GET = withRole(handleGet, ["admin"]);
+export const GET = withRole(["admin"], handleGet);

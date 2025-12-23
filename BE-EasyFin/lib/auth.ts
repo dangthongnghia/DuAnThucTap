@@ -38,11 +38,12 @@ export function getTokenFromHeader(request: NextRequest): string | null {
 
 /**
  * Middleware để bảo vệ các route cần authentication
+ * Hỗ trợ cả static routes và dynamic routes với params
  */
-export function withAuth(
-  handler: (request: NextRequest, user: JwtPayload) => Promise<NextResponse>
+export function withAuth<T = unknown>(
+  handler: (request: NextRequest, user: JwtPayload, context?: T) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest) => {
+  return async (request: NextRequest, context?: T) => {
     const token = getTokenFromHeader(request);
     
     if (!token) {
@@ -67,18 +68,19 @@ export function withAuth(
       );
     }
     
-    return handler(request, payload);
+    return handler(request, payload, context);
   };
 }
 
 /**
  * Middleware để bảo vệ các route cần role cụ thể
+ * Hỗ trợ cả static routes và dynamic routes với params
  */
-export function withRole(
+export function withRole<T = unknown>(
   roles: string[],
-  handler: (request: NextRequest, user: JwtPayload) => Promise<NextResponse>
+  handler: (request: NextRequest, user: JwtPayload, context?: T) => Promise<NextResponse>
 ) {
-  return withAuth(async (request: NextRequest, user: JwtPayload) => {
+  return withAuth<T>(async (request: NextRequest, user: JwtPayload, context?: T) => {
     if (!roles.includes(user.role)) {
       return NextResponse.json(
         {
@@ -89,6 +91,6 @@ export function withRole(
       );
     }
     
-    return handler(request, user);
+    return handler(request, user, context);
   });
 }

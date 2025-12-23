@@ -132,10 +132,11 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
     }
 
     // Kiểm tra tên tài khoản đã tồn tại chưa (cho cùng user)
+    // MySQL mặc định đã case-insensitive với collation utf8mb4_unicode_ci
     const existingAccount = await prisma.account.findFirst({
       where: {
         userId: user.userId,
-        name: { equals: name.trim(), mode: "insensitive" },
+        name: name.trim(),
       },
     });
 

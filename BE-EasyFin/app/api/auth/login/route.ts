@@ -87,14 +87,14 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
     // Tạo refresh token
     const refreshToken = jwt.sign(
       { userId: user.id },
       JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "30d" } as jwt.SignOptions
     );
 
     return NextResponse.json(

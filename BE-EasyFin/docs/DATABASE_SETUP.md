@@ -1,15 +1,20 @@
 # Hướng dẫn Setup Database PostgreSQL cho EasyFin
+# Hướng dẫn Setup Database MySQL cho EasyFin (Hosting)
 
 ## Yêu cầu
 
 - PostgreSQL đã được cài đặt (khuyến nghị version 14+)
 - DBeaver hoặc pgAdmin để quản lý database
+- Hosting hỗ trợ MySQL hoặc MySQL server đã cài đặt.
+- Thông tin kết nối: Host, Port, Username, Password, Database Name.
 - Node.js 18+ và pnpm
 
 ## Bước 1: Tạo Database
 
 Mở DBeaver và kết nối tới PostgreSQL server, sau đó chạy lệnh SQL:
+Nếu sử dụng Hosting (cPanel, DirectAdmin...), hãy vào trang quản trị để tạo một Database MySQL và User mới, sau đó gán quyền User cho Database đó.
 
+Nếu bạn tự quản lý server, chạy lệnh SQL:
 ```sql
 CREATE DATABASE easyfin;
 ```
@@ -20,6 +25,7 @@ Mở file `.env` và cập nhật `DATABASE_URL` với thông tin kết nối c�
 
 ```env
 DATABASE_URL="postgresql://postgres:your_password@localhost:5432/easyfin?schema=public"
+DATABASE_URL="mysql://username:password@host:3306/database_name"
 ```
 
 Thay thế:

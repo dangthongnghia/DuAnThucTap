@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth, withRole, JwtPayload } from "@/lib/auth";
+import { withRole, JwtPayload } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma, AccountType } from "@prisma/client";
 
 /**
  * GET /api/admin/accounts - Lấy danh sách tài khoản (chỉ admin)
  */
-async function handleGet(request: NextRequest, user: JwtPayload) {
+async function handleGet(request: NextRequest, _user: JwtPayload) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -19,18 +20,18 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.AccountWhereInput = {};
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { user: { name: { contains: search, mode: "insensitive" } } },
-        { user: { email: { contains: search, mode: "insensitive" } } },
+        { name: { contains: search } },
+        { user: { name: { contains: search } } },
+        { user: { email: { contains: search } } },
       ];
     }
 
-    if (type) {
-      where.type = type;
+    if (type && Object.values(AccountType).includes(type as AccountType)) {
+      where.type = type as AccountType;
     }
 
     if (isActive !== null && isActive !== "") {
@@ -94,4 +95,4 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
   }
 }
 
-export const GET = withAuth(withRole(handleGet, ["admin"]));
+export const GET = withRole(["admin"], handleGet);
