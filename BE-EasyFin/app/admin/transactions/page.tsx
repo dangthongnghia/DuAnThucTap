@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { fetcher } from "@/lib/api";
 
 interface Transaction {
   id: string;
@@ -38,8 +39,8 @@ export default function AdminTransactionsPage() {
 
   const fetchTransactions = async () => {
     setLoading(true);
+    setError("");
     try {
-      const token = localStorage.getItem("token");
       const params = new URLSearchParams({
         page: page.toString(),
         limit: "10",
@@ -49,18 +50,15 @@ export default function AdminTransactionsPage() {
         ...(toDate && { toDate }),
       });
 
-      const res = await fetch(`/api/admin/transactions?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await res.json();
+      const result = await fetcher(`/api/admin/transactions?${params}`);
 
       if (result.success) {
         setData(result.data);
       } else {
         setError(result.error || "Không thể tải dữ liệu");
       }
-    } catch (err) {
-      setError("Lỗi kết nối server");
+    } catch (err: any) {
+      setError(err.payload?.error || "Lỗi kết nối server");
     } finally {
       setLoading(false);
     }
@@ -75,12 +73,9 @@ export default function AdminTransactionsPage() {
     if (!confirm("Bạn có chắc muốn xóa giao dịch này?")) return;
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/admin/transactions?id=${id}`, {
+      const result = await fetcher(`/api/admin/transactions?id=${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
-      const result = await res.json();
 
       if (result.success) {
         fetchTransactions();

@@ -13,18 +13,18 @@ const PORT = '3001';
 
 // Auto-detect the correct URL based on platform
 const getApiUrl = () => {
-  if (__DEV__) {
-    if (Platform.OS === 'android') {
-      // Check if running on emulator or real device
-      // Emulator uses 10.0.2.2, real device uses network IP
-      return `http://10.0.2.2:${PORT}`;
-    } else if (Platform.OS === 'ios') {
-      return `http://localhost:${PORT}`;
-    }
-    // Web or other platforms
-    return `http://localhost:${PORT}`;
-  }
-  return 'https://api.easyfin.com';
+  // if (__DEV__) {
+  //   if (Platform.OS === 'android') {
+  //     // Check if running on emulator or real device
+  //     // Emulator uses 10.0.2.2, real device uses network IP
+  //     return `http://10.0.2.2:${PORT}`;
+  //   } else if (Platform.OS === 'ios') {
+  //     return `http://localhost:${PORT}`;
+  //   }
+  //   // Web or other platforms
+  //   return `http://localhost:${PORT}`;
+  // }
+  return 'https://be-easy-fin.vercel.app';
 };
 
 // Alternative URLs for different scenarios
@@ -97,6 +97,10 @@ export async function apiRequest<T>(
     return { success: false, error: 'Network error' };
   }
 }
+export const API_CONFIG = {
+  BASE_URL: API_URL,
+  TIMEOUT: 30000,
+};
 
 export default {
   API_URL,

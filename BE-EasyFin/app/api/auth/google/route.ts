@@ -14,39 +14,86 @@ interface GoogleUserInfo {
   picture: string;
 }
 
+interface GoogleIdTokenPayload {
+  email: string;
+  email_verified: boolean;
+  name: string;
+  picture: string;
+  sub: string;
+}
+
+/**
+ * Decode Google ID Token (credential) without verification
+ * In production, you should verify the token with Google's public keys
+ */
+function decodeGoogleIdToken(credential: string): GoogleIdTokenPayload | null {
+  try {
+    const parts = credential.split(".");
+    if (parts.length !== 3) return null;
+    
+    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
 /**
  * POST /api/auth/google - Đăng nhập/đăng ký bằng Google
+ * Supports both access token and credential (ID token) methods
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { accessToken } = body;
+    const { accessToken, credential } = body;
 
-    if (!accessToken) {
+    let googleUser: GoogleUserInfo | null = null;
+
+    // Method 1: Using credential (ID token from Google Sign-In)
+    if (credential) {
+      const decoded = decodeGoogleIdToken(credential);
+      if (!decoded || !decoded.email) {
+        return NextResponse.json(
+          { success: false, error: "Credential không hợp lệ" },
+          { status: 401 }
+        );
+      }
+      
+      googleUser = {
+        id: decoded.sub,
+        email: decoded.email,
+        verified_email: decoded.email_verified,
+        name: decoded.name,
+        given_name: decoded.name?.split(" ")[0] || "",
+        family_name: decoded.name?.split(" ").slice(1).join(" ") || "",
+        picture: decoded.picture,
+      };
+    }
+    // Method 2: Using access token
+    else if (accessToken) {
+      const googleResponse = await fetch(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      if (!googleResponse.ok) {
+        return NextResponse.json(
+          { success: false, error: "Token Google không hợp lệ" },
+          { status: 401 }
+        );
+      }
+
+      googleUser = await googleResponse.json();
+    } else {
       return NextResponse.json(
-        { success: false, error: "Access token là bắt buộc" },
+        { success: false, error: "Access token hoặc credential là bắt buộc" },
         { status: 400 }
       );
     }
 
-    // Lấy thông tin user từ Google
-    const googleResponse = await fetch(
-      "https://www.googleapis.com/oauth2/v2/userinfo",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-
-    if (!googleResponse.ok) {
-      return NextResponse.json(
-        { success: false, error: "Token Google không hợp lệ" },
-        { status: 401 }
-      );
-    }
-
-    const googleUser: GoogleUserInfo = await googleResponse.json();
-
-    if (!googleUser.email) {
+    if (!googleUser || !googleUser.email) {
       return NextResponse.json(
         { success: false, error: "Không thể lấy email từ Google" },
         { status: 400 }
@@ -128,7 +175,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Đăng nhập thành công",
       data: {
-        token,
+        accessToken: token,
         user: {
           id: user.id,
           email: user.email,

@@ -1,4 +1,133 @@
-# Hướng dẫn cấu hình Google OAuth cho EasyFin
+# Hướng dẫn cấu hình Google OAuth (Server-side)
+
+## Tổng quan
+
+EasyFin sử dụng phương thức đăng nhập Google OAuth **server-side**. Toàn bộ quá trình OAuth được xử lý bởi BackEnd, FrontEnd chỉ cần mở browser và nhận kết quả qua deep link.
+
+## Flow hoạt động
+
+```
+1. User nhấn "Đăng nhập bằng Google" trên app
+2. App mở browser đến: {BACKEND_URL}/api/auth/google/start
+3. BackEnd redirect đến Google OAuth consent screen
+4. User đăng nhập và authorize
+5. Google redirect về: {BACKEND_URL}/api/auth/google/callback
+6. BackEnd xử lý, tạo JWT token
+7. BackEnd redirect về app: quanlytaichinh://login?token=...&user=...
+8. App nhận token và user info, lưu vào AsyncStorage
+```
+
+## Cấu hình Google Cloud Console
+
+### Bước 1: Tạo Project
+
+1. Truy cập [Google Cloud Console](https://console.cloud.google.com/)
+2. Tạo project mới hoặc chọn project có sẵn
+
+### Bước 2: Bật Google+ API
+
+1. Vào **APIs & Services** → **Library**
+2. Tìm "Google+ API" hoặc "Google Identity"
+3. Nhấn **Enable**
+
+### Bước 3: Cấu hình OAuth Consent Screen
+
+1. Vào **APIs & Services** → **OAuth consent screen**
+2. Chọn **External** (cho public app) hoặc **Internal** (cho organization)
+3. Điền thông tin:
+   - App name: `EasyFin`
+   - User support email: email của bạn
+   - Developer contact: email của bạn
+4. Thêm scopes: `email`, `profile`
+5. Thêm test users (nếu đang ở chế độ Testing)
+
+### Bước 4: Tạo OAuth 2.0 Client ID
+
+1. Vào **APIs & Services** → **Credentials**
+2. Nhấn **Create Credentials** → **OAuth client ID**
+3. Chọn **Web application**
+4. Đặt tên: `EasyFin Backend`
+5. Thêm **Authorized redirect URIs**:
+   - Development: `http://localhost:3001/api/auth/google/callback`
+   - Production: `https://api.easyfin.com/api/auth/google/callback`
+6. Nhấn **Create**
+7. Copy **Client ID** và **Client Secret**
+
+## Cấu hình BackEnd
+
+### Thêm vào file `.env`:
+
+```env
+# Google OAuth
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-client-secret"
+```
+
+### Trên Vercel (Production):
+
+1. Vào **Settings** → **Environment Variables**
+2. Thêm:
+   - `GOOGLE_CLIENT_ID` = Client ID từ Google Console
+   - `GOOGLE_CLIENT_SECRET` = Client Secret từ Google Console
+
+## Cấu hình FrontEnd
+
+Không cần cấu hình gì đặc biệt! FrontEnd sử dụng:
+- `expo-web-browser` để mở browser
+- `expo-linking` để nhận deep link callback
+
+App scheme đã được cấu hình trong `app.json`:
+```json
+{
+  "expo": {
+    "scheme": "quanlytaichinh"
+  }
+}
+```
+
+## API Endpoints
+
+### GET /api/auth/google/start
+
+Bắt đầu OAuth flow. Redirect user đến Google.
+
+**Query params:**
+- `redirect_uri` (optional): Deep link để redirect về app. Default: `quanlytaichinh://login`
+
+### GET /api/auth/google/callback
+
+Xử lý callback từ Google. Tạo user nếu chưa tồn tại, tạo JWT token.
+
+**Redirect về app với params:**
+- `success=true&token=...&user=...` (thành công)
+- `error=...` (thất bại)
+
+### POST /api/auth/google (Legacy)
+
+Vẫn hỗ trợ gửi access token trực tiếp từ client.
+
+## Troubleshooting
+
+### Lỗi "redirect_uri_mismatch"
+
+- Kiểm tra redirect URI trong Google Console khớp chính xác với URL của BackEnd
+- Development: `http://localhost:3001/api/auth/google/callback`
+- Production: phải dùng HTTPS
+
+### Lỗi "access_denied"
+
+- User có thể đã từ chối authorize
+- Kiểm tra OAuth consent screen đã được verify (nếu production)
+
+### App không mở sau khi đăng nhập
+
+- Kiểm tra scheme trong `app.json` đúng: `quanlytaichinh`
+- Rebuild app nếu thay đổi scheme
+
+### Token không nhận được
+
+- Kiểm tra BackEnd logs
+- Đảm bảo `GOOGLE_CLIENT_SECRET` chính xác cho EasyFin
 
 ## Tóm tắt nhanh cho Android
 
