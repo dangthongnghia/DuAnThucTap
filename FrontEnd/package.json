@@ -28,7 +28,6 @@
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "expo": "~54.0.25",
-    "expo-auth-session": "~7.0.10",
     "expo-background-fetch": "~14.0.8",
     "expo-constants": "~18.0.10",
     "expo-crypto": "~15.0.7",

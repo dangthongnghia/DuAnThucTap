@@ -3,11 +3,11 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 
-const dev = false;
-const hostname = process.env.HOST || '0.0.0.0';
-const port = parseInt(process.env.PORT, 10) || 3001;
+const dev = process.env.NODE_ENV !== 'production';
+const hostname = '0.0.0.0'; 
+const port = parseInt(process.env.PORT || '3002', 10);
 
-const app = next({ dev, hostname, port, dir: __dirname });
+const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -20,10 +20,8 @@ app.prepare().then(() => {
       res.statusCode = 500;
       res.end('internal server error');
     }
-  }).listen(port, hostname, () => {
+  }).listen(port, hostname, (err) => {
+    if (err) throw err;
     console.log(`> Ready on http://${hostname}:${port}`);
   });
-}).catch((err) => {
-  console.error('Error starting server:', err);
-  process.exit(1);
 });

@@ -117,8 +117,8 @@ export default function AdminDashboardPage() {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-blue-100">Tổng người dùng</p>
-              <p className="text-3xl font-bold mt-2">{stats?.users.total.toLocaleString() || 0}</p>
-              <p className="text-blue-200 text-sm mt-1">+{stats?.users.newThisPeriod || 0} mới</p>
+              <p className="text-3xl font-bold mt-2">{stats?.users?.total.toLocaleString() || 0}</p>
+              <p className="text-blue-200 text-sm mt-1">+{stats?.users?.newThisPeriod || 0} mới</p>
             </div>
             <span className="text-4xl">👥</span>
           </div>
@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-green-100">Thu nhập</p>
-              <p className="text-3xl font-bold mt-2">{formatShortCurrency(stats?.transactions.income || 0)}</p>
+              <p className="text-3xl font-bold mt-2">{formatShortCurrency(stats?.transactions?.income || 0)}</p>
               <p className="text-green-200 text-sm mt-1">Trong kỳ</p>
             </div>
             <span className="text-4xl">📈</span>
@@ -139,7 +139,7 @@ export default function AdminDashboardPage() {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-red-100">Chi tiêu</p>
-              <p className="text-3xl font-bold mt-2">{formatShortCurrency(stats?.transactions.expense || 0)}</p>
+              <p className="text-3xl font-bold mt-2">{formatShortCurrency(stats?.transactions?.expense || 0)}</p>
               <p className="text-red-200 text-sm mt-1">Trong kỳ</p>
             </div>
             <span className="text-4xl">📉</span>
@@ -150,8 +150,8 @@ export default function AdminDashboardPage() {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-purple-100">Giao dịch</p>
-              <p className="text-3xl font-bold mt-2">{stats?.transactions.total.toLocaleString() || 0}</p>
-              <p className="text-purple-200 text-sm mt-1">+{stats?.transactions.thisPeriod || 0} trong kỳ</p>
+              <p className="text-3xl font-bold mt-2">{stats?.transactions?.total.toLocaleString() || 0}</p>
+              <p className="text-purple-200 text-sm mt-1">+{stats?.transactions?.thisPeriod || 0} trong kỳ</p>
             </div>
             <span className="text-4xl">💳</span>
           </div>
@@ -162,20 +162,20 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Users hoạt động</p>
-          <p className="text-2xl font-bold text-gray-900">{stats?.users.active || 0}</p>
+          <p className="text-2xl font-bold text-gray-900">{stats?.users?.active || 0}</p>
         </div>
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Tổng tài khoản</p>
-          <p className="text-2xl font-bold text-gray-900">{stats?.accounts.total || 0}</p>
+          <p className="text-2xl font-bold text-gray-900">{stats?.accounts?.total || 0}</p>
         </div>
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Ngân sách</p>
-          <p className="text-2xl font-bold text-gray-900">{stats?.budgets.total || 0}</p>
+          <p className="text-2xl font-bold text-gray-900">{stats?.budgets?.total || 0}</p>
         </div>
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Số dư ròng</p>
-          <p className={`text-2xl font-bold ${(stats?.transactions.netBalance || 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {formatShortCurrency(stats?.transactions.netBalance || 0)}
+          <p className={`text-2xl font-bold ${(stats?.transactions?.netBalance || 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+            {formatShortCurrency(stats?.transactions?.netBalance || 0)}
           </p>
         </div>
       </div>
