@@ -5,71 +5,54 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET || "easyfin-secret-key-2024";
 
 interface GoogleUserInfo {
-  id: string;
   email: string;
-  verified_email: boolean;
   name: string;
-  given_name: string;
-  family_name: string;
   picture: string;
-}
-
-interface GoogleIdTokenPayload {
-  email: string;
   email_verified: boolean;
-  name: string;
-  picture: string;
-  sub: string;
-}
-
-/**
- * Decode Google ID Token (credential) without verification
- * In production, you should verify the token with Google's public keys
- */
-function decodeGoogleIdToken(credential: string): GoogleIdTokenPayload | null {
-  try {
-    const parts = credential.split(".");
-    if (parts.length !== 3) return null;
-    
-    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
-    return payload;
-  } catch (error) {
-    return null;
-  }
 }
 
 /**
  * POST /api/auth/google - Đăng nhập/đăng ký bằng Google
- * Supports both access token and credential (ID token) methods
+ * Hỗ trợ Web (credential) và Mobile (idToken/accessToken)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { accessToken, credential } = body;
+    // credential: từ Web (GSI)
+    // idToken: từ Mobile (React Native)
+    // accessToken: từ Mobile hoặc OAuth flow truyền thống
+    const { accessToken, credential, idToken } = body;
 
     let googleUser: GoogleUserInfo | null = null;
+    const idTokenToVerify = credential || idToken;
 
-    // Method 1: Using credential (ID token from Google Sign-In)
-    if (credential) {
-      const decoded = decodeGoogleIdToken(credential);
-      if (!decoded || !decoded.email) {
+    // Cách 1: Xác thực ID Token (Khuyên dùng cho cả Web & Mobile)
+    if (idTokenToVerify) {
+      // Gọi Google để verify token thay vì decode local (bảo mật hơn)
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${idTokenToVerify}`
+      );
+
+      if (!verifyRes.ok) {
         return NextResponse.json(
-          { success: false, error: "Credential không hợp lệ" },
+          { success: false, error: "Google ID Token không hợp lệ" },
           { status: 401 }
         );
       }
+
+      const payload = await verifyRes.json();
       
+      // Kiểm tra audience (client_id) nếu cần thiết để tăng bảo mật
+      // if (payload.aud !== process.env.GOOGLE_CLIENT_ID) ...
+
       googleUser = {
-        id: decoded.sub,
-        email: decoded.email,
-        verified_email: decoded.email_verified,
-        name: decoded.name,
-        given_name: decoded.name?.split(" ")[0] || "",
-        family_name: decoded.name?.split(" ").slice(1).join(" ") || "",
-        picture: decoded.picture,
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture,
+        email_verified: payload.email_verified === "true" || payload.email_verified === true,
       };
     }
-    // Method 2: Using access token
+    // Cách 2: Sử dụng Access Token
     else if (accessToken) {
       const googleResponse = await fetch(
         "https://www.googleapis.com/oauth2/v2/userinfo",
@@ -85,10 +68,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      googleUser = await googleResponse.json();
+      const rawUser = await googleResponse.json();
+      googleUser = {
+        email: rawUser.email,
+        name: rawUser.name,
+        picture: rawUser.picture,
+        email_verified: rawUser.verified_email,
+      };
     } else {
       return NextResponse.json(
-        { success: false, error: "Access token hoặc credential là bắt buộc" },
+        { success: false, error: "Vui lòng cung cấp idToken hoặc accessToken" },
         { status: 400 }
       );
     }
@@ -100,7 +89,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tìm hoặc tạo user
+    // Tìm hoặc tạo user trong DB
     let user = await prisma.user.findUnique({
       where: { email: googleUser.email.toLowerCase() },
     });
@@ -118,7 +107,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Tạo tài khoản mặc định cho user mới
+      // Tạo tài khoản mặc định
       await prisma.account.create({
         data: {
           userId: user.id,
@@ -152,7 +141,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Kiểm tra tài khoản có bị khóa không
+    // Kiểm tra khóa tài khoản
     if (!user.isActive) {
       return NextResponse.json(
         { success: false, error: "Tài khoản đã bị khóa" },
@@ -160,7 +149,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tạo JWT token
+    // Tạo JWT token của hệ thống
     const token = jwt.sign(
       {
         userId: user.id,

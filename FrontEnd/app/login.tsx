@@ -158,9 +158,11 @@ export default function LoginScreen() {
           <Typography variant="body" className="text-muted-foreground">
             Don't have an account?{' '}
           </Typography>
-          <Typography variant="body" className="text-primary font-semibold">
-            Sign Up
-          </Typography>
+          <TouchableOpacity onPress={() => router.push('/register')}>
+            <Typography variant="body" className="text-primary font-semibold">
+              Sign Up
+            </Typography>
+          </TouchableOpacity>
         </View>
       </View>
     </ScreenWrapper>

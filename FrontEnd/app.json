@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "EasyFin",
-    "scheme": "quanlytaichinh",
+    "scheme": "easyfin-login",
     "slug": "money-manager",
     "version": "1.0.0",
     "orientation": "portrait",

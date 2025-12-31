@@ -189,20 +189,20 @@ export default function AdminNotificationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Tổng thông báo</p>
-          <p className="text-2xl font-bold text-gray-900">{data?.stats.total.toLocaleString() || 0}</p>
+          <p className="text-2xl font-bold text-gray-900">{data?.stats?.total.toLocaleString() || 0}</p>
         </div>
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Chưa đọc</p>
-          <p className="text-2xl font-bold text-orange-600">{data?.stats.unread.toLocaleString() || 0}</p>
+          <p className="text-2xl font-bold text-orange-600">{data?.stats?.unread.toLocaleString() || 0}</p>
         </div>
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Tỷ lệ đọc</p>
-          <p className="text-2xl font-bold text-green-600">{(data?.stats.readRate || 0).toFixed(1)}%</p>
+          <p className="text-2xl font-bold text-green-600">{(data?.stats?.readRate || 0).toFixed(1)}%</p>
         </div>
         <div className="bg-white rounded-xl shadow-md p-4">
           <p className="text-sm text-gray-500">Loại phổ biến</p>
           <p className="text-lg font-bold text-indigo-600">
-            {data?.stats.byType?.[0]?.type ? notificationTypeLabels[data.stats.byType[0].type] || data.stats.byType[0].type : "N/A"}
+            {data?.stats?.byType?.[0]?.type ? notificationTypeLabels[data?.stats?.byType?.[0]?.type] || data?.stats?.byType?.[0]?.type : "N/A"}
           </p>
         </div>
       </div>
@@ -211,7 +211,7 @@ export default function AdminNotificationsPage() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Phân bổ theo loại</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          {data?.stats.byType && data.stats.byType.length > 0 ? (
+          {data?.stats?.byType && data.stats.byType.length > 0 ? (
             data.stats.byType.map((item) => (
               <div
                 key={item.type}
@@ -351,7 +351,7 @@ export default function AdminNotificationsPage() {
             </table>
 
             {/* Pagination */}
-            {data && data.pagination.totalPages > 1 && (
+            {data?.pagination && data.pagination.totalPages > 1 && (
               <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t">
                 <div className="text-sm text-gray-500">
                   Hiển thị {(page - 1) * 10 + 1}-{Math.min(page * 10, data.pagination.total)} trong tổng số {data.pagination.total.toLocaleString()} thông báo
