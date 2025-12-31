@@ -71,6 +71,7 @@
     "@types/axios": "^0.9.36",
     "@types/react": "~19.1.10",
     "autoprefixer": "^10.4.19",
+    "baseline-browser-mapping": "^2.9.11",
     "debug": "^4.4.3",
     "eslint": "^8.57.0",
     "expo-module-scripts": "^5.0.7",

@@ -1,81 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+export const dynamic = 'force-dynamic';
 
-// Get base URL for redirect
-function getBaseUrl(request: NextRequest): string {
-  const host = request.headers.get("host") || "localhost:3001";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  return `${protocol}://${host}`;
-}
-
-/**
- * GET /api/auth/google/start - Start Google OAuth flow
- * Redirect user to Google OAuth consent screen
- * 
- * Query params:
- * - redirect_uri: Deep link to redirect back to mobile app (default: quanlytaichinh://login)
- */
 export async function GET(request: NextRequest) {
-  try {
     const { searchParams } = new URL(request.url);
-    const mobileRedirectUri = searchParams.get("redirect_uri") || "quanlytaichinh://login";
-    
-    const baseUrl = getBaseUrl(request);
-    const callbackUrl = `${baseUrl}/api/auth/google/callback`;
+    const redirectUri = searchParams.get('redirect_uri') || 'easyfin-login://login';
 
-    // Build Google OAuth URL
-    const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    googleAuthUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-    googleAuthUrl.searchParams.set("redirect_uri", callbackUrl);
-    googleAuthUrl.searchParams.set("response_type", "code");
-    googleAuthUrl.searchParams.set("scope", "email profile");
-    googleAuthUrl.searchParams.set("access_type", "offline");
-    googleAuthUrl.searchParams.set("prompt", "consent");
-    // Pass mobile redirect URI in state parameter
-    googleAuthUrl.searchParams.set("state", mobileRedirectUri);
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
-    return NextResponse.redirect(googleAuthUrl.toString());
-  } catch (error) {
-    console.error("Google OAuth start error:", error);
-    return NextResponse.json(
-      { success: false, error: "Không thể khởi tạo đăng nhập Google" },
-      { status: 500 }
-    );
-  }
-}
+    if (!googleClientId) {
+        return NextResponse.json(
+            { error: "GOOGLE_CLIENT_ID is not defined" },
+            { status: 500 }
+        );
+    }
 
-/**
- * POST /api/auth/google/start - Get Google OAuth URL without redirect
- * Returns the OAuth URL for mobile app to open in browser
- */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const mobileRedirectUri = body.redirect_uri || "quanlytaichinh://login";
-    
-    const baseUrl = getBaseUrl(request);
-    const callbackUrl = `${baseUrl}/api/auth/google/callback`;
+    // Xác định Callback URL của Backend
+    // Trên Vercel, dùng host header hoặc env
+    const host = request.headers.get("host");
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const backendBaseUrl = `${protocol}://${host}`;
+    const callbackUrl = `${backendBaseUrl}/api/auth/google/callback`;
 
-    // Build Google OAuth URL
-    const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    googleAuthUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-    googleAuthUrl.searchParams.set("redirect_uri", callbackUrl);
-    googleAuthUrl.searchParams.set("response_type", "code");
-    googleAuthUrl.searchParams.set("scope", "email profile");
-    googleAuthUrl.searchParams.set("access_type", "offline");
-    googleAuthUrl.searchParams.set("prompt", "consent");
-    googleAuthUrl.searchParams.set("state", mobileRedirectUri);
+    // Tạo Google Auth URL
+    const scopes = [
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+    ].join(" ");
 
-    return NextResponse.json({
-      success: true,
-      authUrl: googleAuthUrl.toString(),
+    const params = new URLSearchParams({
+        client_id: googleClientId,
+        redirect_uri: callbackUrl,
+        response_type: "code",
+        scope: scopes,
+        access_type: "offline",
+        prompt: "consent", // Force consent to ensure refresh token if needed
+        state: redirectUri, // Truyền redirect URI của App qua state
     });
-  } catch (error) {
-    console.error("Google OAuth start error:", error);
-    return NextResponse.json(
-      { success: false, error: "Không thể khởi tạo đăng nhập Google" },
-      { status: 500 }
-    );
-  }
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+    return NextResponse.redirect(url);
 }

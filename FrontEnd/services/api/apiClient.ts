@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL cho API - Thay đổi theo môi trường
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://be-easy-fin.vercel.app/api';
 
 // Token storage key
 const TOKEN_KEY = 'authToken';

@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
       });
       client.requestAccessToken();
     } else {
-      setError("Đăng nhập không thành công");
+      setError("ĐăHayng nhập không thành công");
     }
   };
 
@@ -245,13 +245,6 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 font-medium mb-2">🔑 Tài khoản test:</p>
-          <div className="text-sm text-gray-500 space-y-1">
-            <p><span className="font-medium">Admin:</span> admin@easyfin.com / password123</p>
-            <p><span className="font-medium">User:</span> demo@easyfin.com / password123</p>
-          </div>
-        </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
           © 2025 EasyFin. All rights reserved.
