@@ -2,19 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth, JwtPayload } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { TransactionType, Prisma } from "@prisma/client";
+import { z } from "zod";
 
-interface CreateTransactionRequest {
-  title: string;
-  type: "income" | "expense";
-  category: string;
-  amount: number;
-  date: string;
-  note?: string;
-  paymentMethod?: string;
-  accountId?: string;
-  receiptImage?: string;
-  attachments?: string[];
-}
+const createTransactionSchema = z.object({
+  title: z.string().min(1, "Tiêu đề là bắt buộc"),
+  type: z.enum(["income", "expense"], {
+    errorMap: () => ({ message: "Loại giao dịch không hợp lệ" }),
+  }),
+  category: z.string().min(1, "Danh mục là bắt buộc"),
+  amount: z.number().min(0.01, "Số tiền phải lớn hơn 0"),
+  date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Ngày không hợp lệ",
+  }),
+  note: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  accountId: z.string().optional(),
+  receiptImage: z.string().optional(),
+  attachments: z.array(z.string()).optional(),
+});
 
 // Map lowercase type to Prisma enum
 const typeMap: Record<string, TransactionType> = {
@@ -28,7 +33,7 @@ const typeMap: Record<string, TransactionType> = {
 async function handleGet(request: NextRequest, user: JwtPayload) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     // Filters
     const type = searchParams.get("type") as "income" | "expense" | null;
     const category = searchParams.get("category");
@@ -38,7 +43,7 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
     const minAmount = searchParams.get("minAmount");
     const maxAmount = searchParams.get("maxAmount");
     const search = searchParams.get("search");
-    
+
     // Pagination
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
@@ -142,7 +147,22 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
  */
 async function handlePost(request: NextRequest, user: JwtPayload) {
   try {
-    const body: CreateTransactionRequest = await request.json();
+    const body = await request.json();
+
+    // Validate input with Zod
+    const result = createTransactionSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: result.error.errors[0].message,
+          errors: result.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       title,
       type,
@@ -154,53 +174,10 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
       accountId,
       receiptImage,
       attachments,
-    } = body;
+    } = result.data;
 
-    // Validate input
-    if (!title || !type || !category || amount === undefined || !date) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Tiêu đề, loại, danh mục, số tiền và ngày là bắt buộc",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate type
     const transactionType = typeMap[type];
-    if (!transactionType) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Loại giao dịch không hợp lệ",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate amount
-    if (amount <= 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Số tiền phải lớn hơn 0",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate date
     const transactionDate = new Date(date);
-    if (isNaN(transactionDate.getTime())) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Ngày không hợp lệ",
-        },
-        { status: 400 }
-      );
-    }
 
     // Tìm hoặc tạo category - MySQL mặc định case-insensitive
     let categoryRecord = await prisma.category.findFirst({
