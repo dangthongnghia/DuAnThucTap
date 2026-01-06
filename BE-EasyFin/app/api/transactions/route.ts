@@ -121,6 +121,8 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
           ...t,
           amount: Number(t.amount),
           type: t.type.toLowerCase(),
+          category: t.category?.name || "Uncategorized", // Frontend expects string name
+          categoryId: t.categoryId,
         })),
         totalCount,
         totalIncome: Number(incomeSum._sum.amount || 0),
@@ -242,6 +244,7 @@ async function handlePost(request: NextRequest, user: JwtPayload) {
           ...newTransaction,
           amount: Number(newTransaction.amount),
           type: newTransaction.type.toLowerCase(),
+          category: newTransaction.category?.name || "Uncategorized", // Frontend expects string name
         },
       },
       { status: 201 }

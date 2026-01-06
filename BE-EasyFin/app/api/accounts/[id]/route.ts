@@ -1,39 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, JwtPayload } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { AccountType } from "@prisma/client";
 
-// Interface cho Account (import từ parent route trong production)
-interface Account {
-  id: string;
-  userId: string;
-  name: string;
-  type: AccountType;
-  balance: number;
-  currency: string;
-  icon?: string;
-  color?: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-type AccountType = 
-  | "cash"
-  | "bank"
-  | "credit_card"
-  | "debit_card"
-  | "e_wallet"
-  | "investment"
-  | "savings"
-  | "loan"
-  | "other";
-
-// Mock database - Trong production, import từ shared module hoặc dùng database thật
-const mockAccounts: Account[] = [];
+// Map lowercase type to Prisma enum
+const typeMap: Record<string, AccountType> = {
+  cash: "CASH",
+  bank: "BANK",
+  credit_card: "CREDIT_CARD",
+  debit_card: "DEBIT_CARD",
+  e_wallet: "E_WALLET",
+  investment: "INVESTMENT",
+  savings: "SAVINGS",
+  loan: "LOAN",
+  other: "OTHER",
+};
 
 interface UpdateAccountRequest {
   name?: string;
-  type?: AccountType;
+  type?: string;
   balance?: number;
   currency?: string;
   icon?: string;
@@ -50,17 +35,19 @@ interface RouteParams {
  * GET /api/accounts/[id] - Lấy thông tin chi tiết tài khoản
  */
 async function handleGet(
-  request: NextRequest, 
+  request: NextRequest,
   user: JwtPayload,
   { params }: RouteParams
 ) {
   try {
     const { id } = await params;
 
-    // Tìm tài khoản
-    const account = mockAccounts.find(
-      (a) => a.id === id && a.userId === user.userId
-    );
+    const account = await prisma.account.findFirst({
+      where: {
+        id,
+        userId: user.userId,
+      },
+    });
 
     if (!account) {
       return NextResponse.json(
@@ -74,7 +61,10 @@ async function handleGet(
 
     return NextResponse.json({
       success: true,
-      data: account,
+      data: {
+        ...account,
+        balance: Number(account.balance),
+      },
     });
   } catch (error) {
     console.error("Error getting account:", error);
@@ -92,7 +82,7 @@ async function handleGet(
  * PUT /api/accounts/[id] - Cập nhật thông tin tài khoản
  */
 async function handlePut(
-  request: NextRequest, 
+  request: NextRequest,
   user: JwtPayload,
   { params }: RouteParams
 ) {
@@ -100,12 +90,14 @@ async function handlePut(
     const { id } = await params;
     const body: UpdateAccountRequest = await request.json();
 
-    // Tìm tài khoản
-    const accountIndex = mockAccounts.findIndex(
-      (a) => a.id === id && a.userId === user.userId
-    );
+    const { name, type, balance, currency, icon, color, description, isActive } = body;
 
-    if (accountIndex === -1) {
+    // Verify ownership
+    const existingAccount = await prisma.account.findFirst({
+      where: { id, userId: user.userId }
+    });
+
+    if (!existingAccount) {
       return NextResponse.json(
         {
           success: false,
@@ -115,76 +107,67 @@ async function handlePut(
       );
     }
 
-    const { name, type, balance, currency, icon, color, description, isActive } = body;
-
-    // Validate name nếu được cung cấp
+    // Validate name if provided
     if (name !== undefined) {
       if (name.trim().length < 2) {
         return NextResponse.json(
-          {
-            success: false,
-            message: "Tên tài khoản phải có ít nhất 2 ký tự",
-          },
+          { success: false, message: "Tên tài khoản phải có ít nhất 2 ký tự" },
           { status: 400 }
         );
       }
 
-      // Kiểm tra tên trùng lặp (ngoại trừ tài khoản hiện tại)
-      const existingAccount = mockAccounts.find(
-        (a) =>
-          a.userId === user.userId &&
-          a.id !== id &&
-          a.name.toLowerCase() === name.trim().toLowerCase()
-      );
+      // Check duplicate name
+      const duplicateAccount = await prisma.account.findFirst({
+        where: {
+          userId: user.userId,
+          name: name.trim(),
+          NOT: { id: id }
+        },
+      });
 
-      if (existingAccount) {
+      if (duplicateAccount) {
         return NextResponse.json(
-          {
-            success: false,
-            message: "Tên tài khoản đã tồn tại",
-          },
+          { success: false, message: "Tên tài khoản đã tồn tại" },
           { status: 409 }
         );
       }
     }
 
-    // Validate account type nếu được cung cấp
+    // Validate type if provided
+    let accountType: AccountType | undefined;
     if (type !== undefined) {
-      const validTypes: AccountType[] = [
-        "cash", "bank", "credit_card", "debit_card",
-        "e_wallet", "investment", "savings", "loan", "other"
-      ];
-      if (!validTypes.includes(type)) {
+      accountType = typeMap[type.toLowerCase()];
+      if (!accountType) {
         return NextResponse.json(
-          {
-            success: false,
-            message: "Loại tài khoản không hợp lệ",
-          },
+          { success: false, message: "Loại tài khoản không hợp lệ" },
           { status: 400 }
         );
       }
     }
 
-    // Cập nhật tài khoản
-    const updatedAccount: Account = {
-      ...mockAccounts[accountIndex],
-      ...(name !== undefined && { name: name.trim() }),
-      ...(type !== undefined && { type }),
-      ...(balance !== undefined && { balance }),
-      ...(currency !== undefined && { currency }),
-      ...(icon !== undefined && { icon }),
-      ...(color !== undefined && { color }),
-      ...(description !== undefined && { description }),
-      ...(isActive !== undefined && { isActive }),
-      updatedAt: new Date(),
-    };
-
-    mockAccounts[accountIndex] = updatedAccount;
+    // Update
+    const updatedAccount = await prisma.account.update({
+      where: { id },
+      data: {
+        userId: user.userId, // Ensure stays same, usually not sending this
+        name: name !== undefined ? name.trim() : undefined,
+        type: accountType,
+        balance: balance !== undefined ? balance : undefined,
+        currency: currency,
+        icon: icon,
+        color: color,
+        description: description,
+        isActive: isActive,
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: "Cập nhật tài khoản thành công",
-      data: updatedAccount,
+      data: {
+        ...updatedAccount,
+        balance: Number(updatedAccount.balance),
+      },
     });
   } catch (error) {
     console.error("Error updating account:", error);
@@ -202,19 +185,19 @@ async function handlePut(
  * DELETE /api/accounts/[id] - Xóa tài khoản
  */
 async function handleDelete(
-  request: NextRequest, 
+  request: NextRequest,
   user: JwtPayload,
   { params }: RouteParams
 ) {
   try {
     const { id } = await params;
 
-    // Tìm tài khoản
-    const accountIndex = mockAccounts.findIndex(
-      (a) => a.id === id && a.userId === user.userId
-    );
+    // Verify ownership
+    const existingAccount = await prisma.account.findFirst({
+      where: { id, userId: user.userId }
+    });
 
-    if (accountIndex === -1) {
+    if (!existingAccount) {
       return NextResponse.json(
         {
           success: false,
@@ -224,13 +207,22 @@ async function handleDelete(
       );
     }
 
-    // Xóa tài khoản
-    const deletedAccount = mockAccounts.splice(accountIndex, 1)[0];
+    // Delete
+    // Note: If having transactions, this might fail depending on foreign key constraints.
+    // Ideally we should soft delete or delete transactions first. 
+    // Assuming cascade delete or similar logic for now, or letting it fail if FK constraint.
+    // Using simple delete for now as per previous logic.
+    await prisma.account.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       success: true,
       message: "Xóa tài khoản thành công",
-      data: deletedAccount,
+      data: {
+        ...existingAccount,
+        balance: Number(existingAccount.balance),
+      },
     });
   } catch (error) {
     console.error("Error deleting account:", error);
@@ -245,10 +237,10 @@ async function handleDelete(
 }
 
 /**
- * PATCH /api/accounts/[id] - Cập nhật một phần tài khoản (thường dùng cho cập nhật số dư)
+ * PATCH /api/accounts/[id] - Cập nhật một phần tài khoản
  */
 async function handlePatch(
-  request: NextRequest, 
+  request: NextRequest,
   user: JwtPayload,
   { params }: RouteParams
 ) {
@@ -256,12 +248,12 @@ async function handlePatch(
     const { id } = await params;
     const body = await request.json();
 
-    // Tìm tài khoản
-    const accountIndex = mockAccounts.findIndex(
-      (a) => a.id === id && a.userId === user.userId
-    );
+    // Verify ownership
+    const existingAccount = await prisma.account.findFirst({
+      where: { id, userId: user.userId }
+    });
 
-    if (accountIndex === -1) {
+    if (!existingAccount) {
       return NextResponse.json(
         {
           success: false,
@@ -271,29 +263,23 @@ async function handlePatch(
       );
     }
 
-    // Chỉ cho phép cập nhật các trường được chỉ định
-    const allowedFields = ["balance", "isActive"];
-    const updateData: Partial<Account> = {};
+    // Only allow specific fields
+    const updateData: any = {};
+    if (body.balance !== undefined) updateData.balance = body.balance;
+    if (body.isActive !== undefined) updateData.isActive = body.isActive;
 
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updateData[field as keyof Account] = body[field];
-      }
-    }
-
-    // Cập nhật tài khoản
-    const updatedAccount: Account = {
-      ...mockAccounts[accountIndex],
-      ...updateData,
-      updatedAt: new Date(),
-    };
-
-    mockAccounts[accountIndex] = updatedAccount;
+    const updatedAccount = await prisma.account.update({
+      where: { id },
+      data: updateData
+    });
 
     return NextResponse.json({
       success: true,
       message: "Cập nhật tài khoản thành công",
-      data: updatedAccount,
+      data: {
+        ...updatedAccount,
+        balance: Number(updatedAccount.balance),
+      },
     });
   } catch (error) {
     console.error("Error patching account:", error);

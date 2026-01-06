@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, JwtPayload } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 // Interfaces
 interface Transaction {
@@ -17,9 +18,6 @@ interface Transaction {
   updatedAt: Date;
 }
 
-// Mock database
-const mockTransactions: Transaction[] = [];
-
 /**
  * GET /api/reports - Lấy báo cáo tài chính
  */
@@ -29,10 +27,31 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
     const type = searchParams.get("type") || "monthly"; // monthly, yearly, category, trend
     const year = parseInt(searchParams.get("year") || new Date().getFullYear().toString());
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : null;
-    const category = searchParams.get("category");
+    const categoryQuery = searchParams.get("category");
 
-    // Lấy transactions của user
-    let userTransactions = mockTransactions.filter((t) => t.userId === user.userId);
+    // Lấy transactions của user từ DB
+    const rawTransactions = await prisma.transaction.findMany({
+      where: {
+        userId: user.userId,
+      },
+      include: {
+        category: true,
+      },
+      orderBy: {
+        date: 'desc',
+      }
+    });
+
+    const userTransactions: Transaction[] = rawTransactions.map(t => ({
+      ...t,
+      amount: Number(t.amount),
+      type: t.type.toLowerCase() as "income" | "expense",
+      category: t.category?.name || "Uncategorized",
+      date: t.date.toISOString(),
+      note: t.note || undefined,
+      paymentMethod: t.paymentMethod || undefined,
+      accountId: t.accountId || undefined,
+    }));
 
     switch (type) {
       case "monthly":
@@ -40,7 +59,7 @@ async function handleGet(request: NextRequest, user: JwtPayload) {
       case "yearly":
         return getYearlyReport(userTransactions, year);
       case "category":
-        return getCategoryReport(userTransactions, year, month, category);
+        return getCategoryReport(userTransactions, year, month, categoryQuery);
       case "trend":
         return getTrendReport(userTransactions, year);
       default:
