@@ -1,6 +1,7 @@
 {
   "home": "Trang chủ",
   "transaction": "Giao dịch",
+  "chart": "Biểu đồ",
   "add": "Thêm",
   "budget": "Ngân sách",
   "profile": "Hồ sơ",
@@ -47,5 +48,4 @@
   "logout_confirm_title": "Đăng xuất",
   "logout_confirm_message": "Bạn có chắc muốn đăng xuất?",
   "cancel": "Hủy"
-  
 }

@@ -1,21 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromHeader, verifyToken, JwtPayload } from "@/lib/auth";
-
-// Mock database - Thay thế bằng database thật trong production
-const mockUsers = [
-  {
-    id: "1",
-    email: "admin@easyfin.com",
-    name: "Admin User",
-    role: "admin",
-  },
-  {
-    id: "2",
-    email: "user@easyfin.com",
-    name: "Normal User",
-    role: "user",
-  },
-];
+import prisma from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Verify token
     const payload = verifyToken(token);
 
-    if (!payload) {
+    if (!payload?.userId) {
       return NextResponse.json(
         {
           success: false,
@@ -46,7 +31,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Tìm user trong database
-    const user = mockUsers.find((u) => u.id === payload.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatar: true,
+        createdAt: true,
+      },
+    });
 
     if (!user) {
       return NextResponse.json(

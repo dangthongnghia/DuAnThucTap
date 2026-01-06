@@ -3,6 +3,8 @@ import { storeData, getData } from '../lib/storage';
 import { recurringStorage } from '../lib/recurringStorage';
 import { RecurringTransaction } from '../types/transaction';
 import { notificationService } from '../services/notificationService';
+import { transactionService } from '../services/api/transactionService';
+import { accountService } from '../services/api/accountService';
 
 import { registerRecurringTask } from '../tasks/recurring-task';
 
@@ -17,6 +19,8 @@ export interface Transaction {
   note: string;
   receiptImage?: string | null;
   recurringId?: string; // Link to recurring transaction
+  categoryId?: string;
+  accountId?: string;
 }
 
 export interface Budget {
@@ -42,12 +46,6 @@ export interface Filters {
 const today = new Date();
 const yesterday = new Date(today);
 yesterday.setDate(yesterday.getDate() - 1);
-
-const initialTransactions: Transaction[] = [
-  { id: '1', title: 'Groceries', amount: 15.00, date: today.toISOString(), type: 'expense', category: 'Food', note: 'Buy an Avocado...' },
-  { id: '2', title: 'Salary', amount: 5000.00, date: today.toISOString(), type: 'income', category: 'Salary', note: 'Monthly income' },
-  { id: '3', title: 'Netflix', amount: 10.00, date: yesterday.toISOString(), type: 'expense', category: 'Subscription', note: 'Netflix subscription' },
-];
 
 const MOCK_BUDGETS: Budget[] = [
   { id: '1', category: 'Shopping', categoryColor: '#facc15', remaining: 150.50, spent: 349.50, total: 500, isOverBudget: false, isOverBudgetNotified: false },
@@ -109,32 +107,39 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Request notification permissions
         await notificationService.requestPermissions();
-        
-        let storedTransactions = await getData('transactions');
-        if (storedTransactions === null || storedTransactions.length === 0) {
-          storedTransactions = initialTransactions;
-          await storeData('transactions', storedTransactions);
-        } else {
-          // Data migration for old string amounts
-          let needsUpdate = false;
-          const migratedTransactions = storedTransactions.map((t: any) => {
-            if (typeof t.amount === 'string') {
-              needsUpdate = true;
-              const numericAmount = Math.abs(parseFloat(t.amount.replace(/[^0-9.-]/g, '')));
-              return {
-                ...t,
-                amount: isNaN(numericAmount) ? 0 : numericAmount,
-                note: t.note || t.description || '',
-                category: t.category || 'Other',
-              };
-            }
-            return t;
+
+        try {
+          // Pass empty filters as first arg, pagination as second arg
+          const transactionRes = await transactionService.getTransactions({}, {
+            limit: 1000
           });
 
-          if (needsUpdate) {
-            await storeData('transactions', migratedTransactions);
+          if (transactionRes.success && transactionRes.data) {
+            const apiTransactions = transactionRes.data.transactions.map((t: any) => ({
+              id: t.id,
+              title: t.title || t.category || 'Untitled', // Fallback title
+              amount: t.amount,
+              type: t.type,
+              category: t.category, // Now a string thanks to backend fix
+              categoryId: t.categoryId,
+              date: t.date,
+              note: t.note || '',
+              receiptImage: t.receiptImage,
+              accountId: t.accountId,
+              recurringId: t.recurringId
+            }));
+            setTransactions(apiTransactions);
+          } else {
+            console.warn("Failed to fetch transactions:", transactionRes.message);
+            // Fallback to local storage or empty?
+            // For now, let's try local storage as cache/fallback
+            let storedTransactions = await getData('transactions');
+            if (storedTransactions) setTransactions(storedTransactions);
           }
-          storedTransactions = migratedTransactions;
+        } catch (apiError) {
+          console.error("API error loading transactions:", apiError);
+          let storedTransactions = await getData('transactions');
+          if (storedTransactions) setTransactions(storedTransactions);
         }
 
         let storedBudgets = await getData('budgets');
@@ -142,17 +147,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           storedBudgets = MOCK_BUDGETS;
           await storeData('budgets', storedBudgets);
         }
-        
+
         // Load recurring transactions
         const storedRecurring = await recurringStorage.getAll();
-        
-        setTransactions(storedTransactions);
+
         setBudgets(storedBudgets);
         setRecurringTransactions(storedRecurring);
       } catch (error) {
         console.error("Failed to load data:", error);
-        setTransactions(initialTransactions);
-        setBudgets(MOCK_BUDGETS);
+        // Fallback to local storage if everything fails
       } finally {
         setLoading(false);
       }
@@ -176,35 +179,90 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const confirmDelete = async () => {
     if (recentlyDeleted.current) {
-        const { transaction } = recentlyDeleted.current;
+      const { transaction } = recentlyDeleted.current;
+      try {
+        await transactionService.deleteTransaction(transaction.id);
         const currentTransactions = await getData('transactions') || [];
         const updatedTransactions = currentTransactions.filter((t: Transaction) => t.id !== transaction.id);
         await storeData('transactions', updatedTransactions);
-        recentlyDeleted.current = null;
+      } catch (error) {
+        console.error("Failed to delete transaction on server:", error);
+      }
+      recentlyDeleted.current = null;
     }
   };
 
   const dismissUndo = () => {
-      if (recentlyDeleted.current) {
-          clearTimeout(recentlyDeleted.current.timeoutId);
-          confirmDelete();
-      }
-      setShowUndoSnackbar(false);
+    if (recentlyDeleted.current) {
+      clearTimeout(recentlyDeleted.current.timeoutId);
+      confirmDelete();
+    }
+    setShowUndoSnackbar(false);
   }
 
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     dismissUndo(); // Confirm any pending deletion
-    const newTransaction: Transaction = { ...transaction, id: Date.now().toString() };
-    const updatedTransactions = [newTransaction, ...transactions];
-    setTransactions(updatedTransactions);
-    await storeData('transactions', updatedTransactions);
+
+    // Create payload matching API expectation
+    const payload = {
+      title: transaction.title,
+      type: transaction.type,
+      category: transaction.category,
+      amount: transaction.amount,
+      date: transaction.date,
+      note: transaction.note,
+      receiptImage: transaction.receiptImage || undefined,
+      accountId: transaction.accountId
+    };
+
+    try {
+      const response = await transactionService.createTransaction(payload);
+      if (response.success && response.data) {
+        const newTransaction: Transaction = {
+          id: response.data.id,
+          title: response.data.title,
+          amount: response.data.amount,
+          type: response.data.type,
+          category: response.data.category,
+          categoryId: response.data.categoryId,
+          date: response.data.date,
+          note: response.data.note || '',
+          receiptImage: response.data.receiptImage,
+          accountId: response.data.accountId
+        };
+        const updatedTransactions = [newTransaction, ...transactions];
+        setTransactions(updatedTransactions);
+        await storeData('transactions', updatedTransactions);
+      }
+    } catch (error) {
+      console.error("Failed to create transaction:", error);
+    }
   };
 
   const updateTransaction = async (updatedTransaction: Transaction) => {
     dismissUndo(); // Confirm any pending deletion
-    const updatedTransactions = transactions.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
-    setTransactions(updatedTransactions);
-    await storeData('transactions', updatedTransactions);
+
+    const payload = {
+      title: updatedTransaction.title,
+      type: updatedTransaction.type,
+      category: updatedTransaction.category,
+      amount: updatedTransaction.amount,
+      date: updatedTransaction.date,
+      note: updatedTransaction.note,
+      receiptImage: updatedTransaction.receiptImage || undefined,
+      accountId: updatedTransaction.accountId
+    };
+
+    try {
+      const response = await transactionService.updateTransaction(updatedTransaction.id, payload);
+      if (response.success) {
+        const finalList = transactions.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
+        setTransactions(finalList);
+        await storeData('transactions', finalList);
+      }
+    } catch (error) {
+      console.error("Failed to update transaction:", error);
+    }
   };
 
   const deleteTransaction = (id: string) => {
@@ -222,9 +280,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Schedule final deletion
     const timeoutId = setTimeout(() => {
-        confirmDelete();
-        setShowUndoSnackbar(false); // Hide snackbar after timeout
-        recentlyDeleted.current = null;
+      confirmDelete();
+      setShowUndoSnackbar(false); // Hide snackbar after timeout
     }, 5000); // 5-second undo window
 
     recentlyDeleted.current = { transaction: transactionToDelete, timeoutId };
@@ -237,7 +294,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Restore transaction
     setTransactions(prev => [recentlyDeleted.current!.transaction, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    
+
     recentlyDeleted.current = null;
     setShowUndoSnackbar(false);
   };
@@ -253,7 +310,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     await recurringStorage.save(newRecurring);
     setRecurringTransactions(prev => [...prev, newRecurring]);
-    
+
     // Schedule notification if enabled
     if (newRecurring.isActive && newRecurring.notifyBefore && newRecurring.notifyBefore > 0) {
       await notificationService.scheduleRecurringNotification(newRecurring);
@@ -264,7 +321,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updated = { ...recurring, updatedAt: new Date().toISOString() };
     await recurringStorage.save(updated);
     setRecurringTransactions(prev => prev.map(r => r.id === recurring.id ? updated : r));
-    
+
     // Reschedule notifications
     await notificationService.cancelRecurringNotifications(recurring.id);
     if (updated.isActive && updated.notifyBefore && updated.notifyBefore > 0) {
@@ -275,7 +332,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const deleteRecurringTransaction = async (id: string) => {
     await recurringStorage.delete(id);
     setRecurringTransactions(prev => prev.filter(r => r.id !== id));
-    
+
     // Cancel notifications
     await notificationService.cancelRecurringNotifications(id);
   };
@@ -332,10 +389,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <DataContext.Provider value={{
-      transactions, budgets, recurringTransactions, loading, 
+      transactions, budgets, recurringTransactions, loading,
       addTransaction, updateTransaction, deleteTransaction, undoDelete, showUndoSnackbar, dismissUndo,
       filteredTransactions, searchQuery, setSearchQuery, sortOrder, setSortOrder, filters, setFilters,
-      addRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction, 
+      addRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction,
       toggleRecurringTransaction
     }}>
       {children}

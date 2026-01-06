@@ -9,6 +9,7 @@ export interface Transaction {
   title: string;
   type: TransactionType;
   category: string;
+  categoryId?: string;
   amount: number;
   date: string;
   note?: string;
