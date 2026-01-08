@@ -1,33 +1,37 @@
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, useColorScheme, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Typography } from '../../components/ui/Typography';
 import { Card } from '../../components/ui/Card';
-import { useData } from '../../contexts/DataContext';
+import { useTransactions, useCreateTransaction, useDeleteTransaction } from '../../hooks/api/useTransactions';
 import { useAuth } from '../../contexts/AuthContext';
 import { Bell, TrendingUp, TrendingDown, Wallet, ArrowUpDown } from 'lucide-react-native';
 import { formatCurrency } from '../../utils/currency';
 import { Colors } from '../../constants/Colors';
 import { SwipeableTransactionItem } from '../../components/Transaction';
+import { Transaction } from '../../contexts/DataContext';
 
 export default function HomeScreen() {
-  const { transactions, loading, deleteTransaction } = useData();
   const { user } = useAuth();
+  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
+  const [refreshing, setRefreshing] = useState(false);
+  const { data: transactionInfo, isLoading: loading, refetch } = useTransactions();
+  const deleteMutation = useDeleteTransaction();
+
+  const transactions = (transactionInfo?.transactions || []) as unknown as Transaction[];
+  const income = transactionInfo?.totalIncome || 0;
+  const expenses = transactionInfo?.totalExpense || 0;
+  const accountBalance = income - expenses;
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
-  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
 
-  const income = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const expenses = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const accountBalance = income - expenses;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -58,7 +62,13 @@ export default function HomeScreen() {
 
   return (
     <ScreenWrapper>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />
+        }
+      >
         {/* Header */}
         <View className="px-6 pt-4 pb-6 flex-row justify-between items-center bg-background">
           <View>
@@ -140,7 +150,7 @@ export default function HomeScreen() {
               <SwipeableTransactionItem
                 key={item.id}
                 item={item}
-                onDelete={deleteTransaction}
+                onDelete={(id) => deleteMutation.mutate(id)}
               />
             ))}
 

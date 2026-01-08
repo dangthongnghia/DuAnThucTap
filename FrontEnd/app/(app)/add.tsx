@@ -1,27 +1,33 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, useColorScheme } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, useColorScheme, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Typography } from '../../components/ui/Typography';
-import { Button } from '../../components/ui/Button'; import { useData } from '../../contexts/DataContext';
+import { Button } from '../../components/ui/Button';
 import { CategorySelectorModal } from '../../components/Modal/CategorySelectorModal';
 import { PaymentMethodSelectorModal } from '../../components/Modal/PaymentMethodSelectorModal';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { ArrowLeft, Calendar, Wallet, GripHorizontal, FileText } from 'lucide-react-native';
 import { Colors } from '../../constants/Colors';
+import { useCreateTransaction, useUpdateTransaction, useTransaction, useDeleteTransaction } from '../../hooks/api/useTransactions';
+import { useAuth } from '../../contexts/AuthContext';
+import { Trash2 } from 'lucide-react-native';
 
 type TransactionType = 'expense' | 'income';
 
 export default function AddOrEditScreen() {
   const { id, type } = useLocalSearchParams<{ id?: string; type?: string }>();
   const router = useRouter();
-  const { addTransaction, updateTransaction, transactions } = useData();
+
+  const { data: existingTransaction, isLoading: isLoadingTransaction } = useTransaction(id);
+  const createMutation = useCreateTransaction();
+  const updateMutation = useUpdateTransaction();
+  const deleteMutation = useDeleteTransaction();
+
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
 
   const isEditing = !!id;
-  const existingTransaction = isEditing ? transactions.find(t => t.id === id) : null;
-
   const [transactionType, setTransactionType] = useState<TransactionType>(
     existingTransaction?.type || (type as TransactionType) || 'expense'
   );
@@ -36,7 +42,7 @@ export default function AddOrEditScreen() {
   };
 
   const [amount, setAmount] = useState(
-    existingTransaction?.amount ? formatCurrency(existingTransaction.amount.toString()) : ''
+    existingTransaction?.amount !== undefined ? formatCurrency(existingTransaction.amount.toString()) : ''
   );
   const [category, setCategory] = useState(existingTransaction?.category || '');
   const [date, setDate] = useState(
@@ -50,6 +56,18 @@ export default function AddOrEditScreen() {
   );
   const [note, setNote] = useState(existingTransaction?.note || '');
 
+  useEffect(() => {
+    if (existingTransaction) {
+      setTransactionType(existingTransaction.type as TransactionType);
+      setAmount(existingTransaction.amount !== undefined ? formatCurrency(existingTransaction.amount.toString()) : '');
+      setCategory(existingTransaction.category || '');
+      setDate(existingTransaction.date ? new Date(existingTransaction.date) : new Date());
+      setPaymentMethodName(existingTransaction.paymentMethod || 'Cash');
+      setAccountId(existingTransaction.accountId || '');
+      setNote(existingTransaction.note || '');
+    }
+  }, [existingTransaction]);
+
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [isCategorySelectorVisible, setCategorySelectorVisible] = useState(false);
   const [isPaymentSelectorVisible, setPaymentSelectorVisible] = useState(false);
@@ -58,6 +76,7 @@ export default function AddOrEditScreen() {
     setAmount('');
     setCategory('');
     setNote('');
+    setDate(new Date());
   };
 
   const handleAmountChange = (value: string) => {
@@ -87,17 +106,42 @@ export default function AddOrEditScreen() {
         note: note || '',
       };
 
-      if (isEditing && existingTransaction) {
-        await updateTransaction(existingTransaction.id, transactionData);
+      if (isEditing && id) {
+        await updateMutation.mutateAsync({ id, data: transactionData });
         router.back();
       } else {
-        await addTransaction(transactionData);
+        await createMutation.mutateAsync(transactionData);
         resetFormForNewTransaction();
       }
     } catch (error) {
       console.error('Error saving transaction:', error);
       alert('Failed to save transaction');
     }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    Alert.alert(
+      'Xác nhận xóa',
+      'Bạn có chắc chắn muốn xóa giao dịch này không?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(id);
+              router.back();
+            } catch (error) {
+              console.error('Error deleting transaction:', error);
+              Alert.alert('Lỗi', 'Không thể xóa giao dịch');
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -228,13 +272,26 @@ export default function AddOrEditScreen() {
         </ScrollView>
 
         {/* Footer */}
-        <View className="p-6 bg-background border-t border-border">
-          <Button
-            label={isEditing ? "Update Transaction" : "Save Transaction"}
-            onPress={handleSave}
-            variant={transactionType === 'expense' ? 'destructive' : 'primary'}
-            className={transactionType === 'income' ? 'bg-green-500' : ''}
-          />
+        <View className="p-6 bg-background border-t border-border flex-row gap-4">
+          {isEditing && (
+            <TouchableOpacity
+              onPress={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-2xl items-center justify-center border border-red-200 dark:border-red-800"
+            >
+              <Trash2 size={24} color="#ef4444" />
+            </TouchableOpacity>
+          )}
+          <View className="flex-1">
+            <Button
+              label={isEditing ? "Update Transaction" : "Save Transaction"}
+              onPress={handleSave}
+              loading={updateMutation.isPending || createMutation.isPending}
+              variant={transactionType === 'expense' ? 'destructive' : 'primary'}
+              className={transactionType === 'income' ? 'bg-green-500' : ''}
+              size="lg"
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
 

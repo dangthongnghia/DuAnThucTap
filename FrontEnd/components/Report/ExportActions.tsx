@@ -7,7 +7,7 @@ interface Transaction {
   type: 'income' | 'expense';
   category: string;
   amount: number;
-  note: string;
+  note?: string;
 }
 
 type Period = 'week' | 'month' | 'year' | 'all';
@@ -18,7 +18,7 @@ export const useExportActions = () => {
       const csv = [
         'Date,Type,Category,Amount,Note',
         ...transactions.map(t =>
-          `${t.date},${t.type},${t.category},${t.amount},"${t.note}"`
+          `${t.date},${t.type},${t.category},${t.amount},"${t.note || ''}"`
         ),
       ].join('\n');
 

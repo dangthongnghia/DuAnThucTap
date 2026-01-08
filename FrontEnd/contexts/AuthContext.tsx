@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   role?: string;
+  picture?: string;
 }
 
 interface AuthContextType {
@@ -14,9 +15,10 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
-  
+
   // Actions
   signIn: (email: string, password: string) => Promise<boolean>;
+  signInWithData: (user: User, token: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -32,6 +34,7 @@ export function useAuthContext() {
   }
   return context;
 }
+export const useAuth = useAuthContext; // Alias for compatibility
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -87,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await authService.login({ email, password });
-      
+
       if (response.success && response.data) {
         setUser(response.data.user as unknown as User);
         setIsAuthenticated(true);
@@ -100,6 +103,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi';
       setError(errorMessage);
       return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const signInWithData = useCallback(async (userData: User, token: string) => {
+    setIsLoading(true);
+    try {
+      await authService.loginWithToken(userData as unknown as ApiUser, token);
+      setUser(userData);
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error('SignInWithData error:', err);
+      setError('Lỗi đồng bộ dữ liệu');
     } finally {
       setIsLoading(false);
     }
@@ -176,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated,
     error,
     signIn,
+    signInWithData,
     signUp,
     signOut,
     checkAuth,

@@ -5,11 +5,11 @@ import { RecurringTransaction } from '../types/transaction';
 import { notificationService } from '../services/notificationService';
 import { transactionService } from '../services/api/transactionService';
 import { accountService, Account } from '../services/api/accountService';
-import { categoryService, Category } from '../services/api/categoryService';
+import { categoryService, Category, CreateCategoryRequest, UpdateCategoryRequest } from '../services/api/categoryService';
+import { getDefaultCategories } from '../constants/DefaultCategories';
+import { useAuth } from './AuthContext';
 
 import { registerRecurringTask } from '../tasks/recurring-task';
-
-// --- Types ---
 export interface Transaction {
   id: string;
   title: string;
@@ -17,12 +17,20 @@ export interface Transaction {
   type: 'income' | 'expense';
   category: string;
   date: string; // ISO date string
-  note: string;
+  note?: string;
   receiptImage?: string | null;
   recurringId?: string; // Link to recurring transaction
   categoryId?: string;
   accountId?: string;
   paymentMethod?: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+  picture?: string;
 }
 
 export interface Budget {
@@ -82,6 +90,10 @@ interface DataContextType {
   deleteRecurringTransaction: (id: string) => Promise<void>;
   toggleRecurringTransaction: (id: string) => Promise<void>;
   refreshData: () => Promise<void>;
+  // Category management
+  addCategory: (category: CreateCategoryRequest) => Promise<void>;
+  updateCategory: (id: string, category: UpdateCategoryRequest) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -145,6 +157,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const categoryRes = await categoryService.getCategories();
         if (categoryRes.success && categoryRes.data) {
           setCategories(categoryRes.data);
+        } else {
+          // Fallback for categories if not found (e.g. empty DB but logged in)
+          let storedCategories = await getData('categories');
+          if (storedCategories) {
+            setCategories(storedCategories);
+          } else {
+            setCategories(getDefaultCategories());
+          }
         }
 
         // Load Accounts
@@ -157,6 +177,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("API error loading data:", apiError);
         let storedTransactions = await getData('transactions');
         if (storedTransactions) setTransactions(storedTransactions);
+
+        let storedCategories = await getData('categories');
+        if (storedCategories) {
+          setCategories(storedCategories);
+        } else {
+          setCategories(getDefaultCategories());
+        }
       }
 
       let storedBudgets = await getData('budgets');
@@ -179,9 +206,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // --- Data Loading & Persistence ---
+  const { isAuthenticated } = useAuth();
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isAuthenticated]);
 
   // Register recurring task after initial data load
   useEffect(() => {
@@ -428,13 +457,63 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return processedTransactions;
   }, [transactions, searchQuery, sortOrder, filters]);
 
+  // --- Category Management Methods ---
+
+  const addCategory = async (data: CreateCategoryRequest) => {
+    if (isAuthenticated) {
+      const response = await categoryService.createCategory(data);
+      if (response.success && response.data) {
+        setCategories(prev => [...prev, response.data!]);
+      }
+    } else {
+      const newCategory: Category = {
+        ...data,
+        id: Date.now().toString(),
+        isSystem: false,
+        isActive: true,
+      };
+      const updatedCategories = [...categories, newCategory];
+      setCategories(updatedCategories);
+      await storeData('categories', updatedCategories);
+    }
+  };
+
+  const updateCategory = async (id: string, data: UpdateCategoryRequest) => {
+    if (isAuthenticated) {
+      const response = await categoryService.updateCategory(id, data);
+      if (response.success && response.data) {
+        setCategories(prev => prev.map(c => c.id === id ? response.data! : c));
+      }
+    } else {
+      const updatedCategories = categories.map(c =>
+        c.id === id ? { ...c, ...data } : c
+      );
+      setCategories(updatedCategories);
+      await storeData('categories', updatedCategories);
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    if (isAuthenticated) {
+      const response = await categoryService.deleteCategory(id);
+      if (response.success) {
+        setCategories(prev => prev.filter(c => c.id !== id));
+      }
+    } else {
+      const updatedCategories = categories.filter(c => c.id !== id);
+      setCategories(updatedCategories);
+      await storeData('categories', updatedCategories);
+    }
+  };
+
   return (
     <DataContext.Provider value={{
       transactions, budgets, recurringTransactions, categories, accounts, loading,
       addTransaction, updateTransaction, deleteTransaction, undoDelete, showUndoSnackbar, dismissUndo,
       filteredTransactions, searchQuery, setSearchQuery, sortOrder, setSortOrder, filters, setFilters,
       addRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction,
-      toggleRecurringTransaction, refreshData: loadData
+      toggleRecurringTransaction, refreshData: loadData,
+      addCategory, updateCategory, deleteCategory
     }}>
       {children}
     </DataContext.Provider>
