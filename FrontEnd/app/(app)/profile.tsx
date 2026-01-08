@@ -10,7 +10,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import {
   User, Settings, Moon, Globe, Bell, Shield,
-  LogOut, ChevronRight, CreditCard, Download, HelpCircle
+  LogOut, ChevronRight, CreditCard, Download, HelpCircle, GripHorizontal
 } from 'lucide-react-native';
 import { Colors } from '../../constants/Colors';
 
@@ -105,6 +105,11 @@ export default function ProfileScreen() {
                 showToggle
                 toggleValue={isDarkMode}
                 onToggle={() => setTheme(isDarkMode ? 'light' : 'dark')}
+              />
+              <SettingItem
+                icon={<GripHorizontal size={20} color={theme.foreground} />}
+                label="Danh mục"
+                onPress={() => router.push('/categories')}
               />
               <SettingItem
                 icon={<Globe size={20} color={theme.foreground} />}

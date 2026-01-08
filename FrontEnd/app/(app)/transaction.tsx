@@ -1,19 +1,37 @@
 import React, { useState } from 'react';
-import { View, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme, RefreshControl } from 'react-native';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Typography } from '../../components/ui/Typography';
 import { Input } from '../../components/ui/Input';
-import { useData } from '../../contexts/DataContext';
+import { useTransactions, useDeleteTransaction } from '../../hooks/api/useTransactions';
+import { Transaction } from '../../contexts/DataContext';
 import { Search, Filter, Trash2 } from 'lucide-react-native';
 import FilterModal from '../../components/Sheet/FilterModal';
 import { Colors } from '../../constants/Colors';
 import { SwipeableTransactionItem } from '../../components/Transaction';
 
 export default function TransactionScreen() {
-  const { filteredTransactions, loading, deleteTransaction, searchQuery, setSearchQuery } = useData();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const { data: transactionInfo, isLoading: loading, refetch } = useTransactions();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+  const deleteMutation = useDeleteTransaction();
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+
+  const transactions = (transactionInfo?.transactions || []) as unknown as Transaction[];
+
+  const filteredTransactions = transactions.filter(t =>
+    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (t.note?.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   if (loading) {
     return (
@@ -52,9 +70,14 @@ export default function TransactionScreen() {
         data={filteredTransactions}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => (
-          <SwipeableTransactionItem item={item} onDelete={deleteTransaction} />
+          <SwipeableTransactionItem
+            item={item}
+            onDelete={(id) => deleteMutation.mutate(id)}
+          />
         )}
         ListEmptyComponent={
           <View className="items-center justify-center py-12">

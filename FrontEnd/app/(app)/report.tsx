@@ -53,19 +53,24 @@ export default function ReportScreen() {
   };
 
   // Transform trendData for chart
+  const lastSixPoints = trendData?.slice(-6) || [];
   const chartData = {
-    labels: trendData.map(d => {
-      const date = new Date(d.date);
-      return `${date.getDate()}/${date.getMonth() + 1}`;
-    }).slice(-6), // Show last 6 points to avoid crowding
+    labels: lastSixPoints.map(d => {
+      try {
+        const date = d.date ? new Date(d.date) : new Date();
+        return isNaN(date.getTime()) ? '--/--' : `${date.getDate()}/${date.getMonth() + 1}`;
+      } catch (e) {
+        return '--/--';
+      }
+    }),
     datasets: [
       {
-        data: trendData.map(d => d.expense).slice(-6),
+        data: lastSixPoints.map(d => d.expense || 0),
         color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`, // Red for expense
         strokeWidth: 2
       },
       {
-        data: trendData.map(d => d.income).slice(-6),
+        data: lastSixPoints.map(d => d.income || 0),
         color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`, // Green for income
         strokeWidth: 2
       }
@@ -111,7 +116,7 @@ export default function ReportScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Stats Grid */}
@@ -119,13 +124,13 @@ export default function ReportScreen() {
           <View className="flex-row gap-4">
             <StatCard
               title="Income"
-              amount={stats.totalIncome}
+              amount={stats?.totalIncome || 0}
               type="income"
               icon={<TrendingUp size={20} color="#22c55e" />}
             />
             <StatCard
               title="Expense"
-              amount={stats.totalExpense}
+              amount={stats?.totalExpense || 0}
               type="expense"
               icon={<TrendingDown size={20} color="#ef4444" />}
             />
@@ -133,13 +138,13 @@ export default function ReportScreen() {
           <View className="flex-row gap-4">
             <StatCard
               title="Net Balance"
-              amount={stats.balance}
+              amount={stats?.balance || 0}
               type="net"
               icon={<DollarSign size={20} color={theme.primary} />}
             />
             <StatCard
               title="Savings"
-              amount={stats.savingsRate}
+              amount={stats?.savingsRate || 0}
               type="net"
               icon={<Award size={20} color={theme.primary} />}
             />

@@ -21,9 +21,12 @@ const typeMap: Record<string, TransactionType> = {
  * PUT /api/categories/[id]
  * Update a category
  */
-async function handlePut(request: NextRequest, user: JwtPayload, { params }: { params: { id: string } }) {
+async function handlePut(request: NextRequest, user: JwtPayload, context?: { params: { id: string } }) {
     try {
-        const id = params.id;
+        const id = context?.params?.id;
+        if (!id) {
+            return NextResponse.json({ success: false, message: "Missing category ID" }, { status: 400 });
+        }
         const body = await request.json();
 
         // Validate
@@ -86,9 +89,12 @@ async function handlePut(request: NextRequest, user: JwtPayload, { params }: { p
  * DELETE /api/categories/[id]
  * Soft delete or hard delete a category
  */
-async function handleDelete(request: NextRequest, user: JwtPayload, { params }: { params: { id: string } }) {
+async function handleDelete(request: NextRequest, user: JwtPayload, context?: { params: { id: string } }) {
     try {
-        const id = params.id;
+        const id = context?.params?.id;
+        if (!id) {
+            return NextResponse.json({ success: false, message: "Missing category ID" }, { status: 400 });
+        }
 
         // Check ownership
         const existing = await prisma.category.findUnique({

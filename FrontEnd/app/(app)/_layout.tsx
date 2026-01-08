@@ -73,6 +73,7 @@ export default function TabLayout() {
       {/* Hidden tabs */}
       <Tabs.Screen name="budget" options={{ href: null }} />
       <Tabs.Screen name="recurring" options={{ href: null }} />
+      <Tabs.Screen name="categories" options={{ href: null }} />
     </Tabs>
   );
 }

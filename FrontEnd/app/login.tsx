@@ -44,7 +44,8 @@ export default function LoginScreen() {
         picture: result.user.avatar || 'https://github.com/shadcn.png',
         role: result.user.role,
       };
-      await signIn(user, result.token);
+      const { signInWithData } = useAuth();
+      await signInWithData(user, result.token);
       router.replace('/(app)');
     }
   };
@@ -57,34 +58,22 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // Call real API
-      const response = await fetch(`${API_URL}${API_ENDPOINTS.LOGIN}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const success = await signIn(email, password);
 
-      const data = await response.json();
-
-      if (data.success) {
-        const user = {
-          id: data.data.user.id,
-          name: data.data.user.name,
-          email: data.data.user.email,
-          picture: data.data.user.avatar || 'https://github.com/shadcn.png',
-          role: data.data.user.role,
-        };
-
-        await signIn(user, data.data.token);
+      if (success) {
         router.replace('/(app)');
       } else {
-        Alert.alert('Lỗi đăng nhập', data.error || 'Email hoặc mật khẩu không đúng');
+        // Lỗi từ AuthContext (đôi khi là lỗi kết nối)
+        Alert.alert(
+          'Lỗi đăng nhập',
+          'Email hoặc mật khẩu không đúng, hoặc không thể kết nối tới server.'
+        );
       }
     } catch (error) {
       console.error('Login error:', error);
       Alert.alert(
         'Lỗi kết nối',
-        `Không thể kết nối tới server.\n\nĐảm bảo:\n1. Backend đang chạy tại ${API_URL}\n2. Sử dụng đúng IP cho thiết bị của bạn`
+        `Không thể kết nối tới server. Vui lòng kiểm tra lại backend.`
       );
     } finally {
       setLoading(false);

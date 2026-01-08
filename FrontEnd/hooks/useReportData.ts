@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useData } from '../contexts/DataContext';
+import { useTransactions } from './api/useTransactions';
+import { Transaction } from '../contexts/DataContext';
 import {
   calculatePeriodStats,
   calculateCategoryBreakdown,
@@ -15,7 +16,8 @@ import {
 type Period = 'week' | 'month' | 'year' | 'all';
 
 export const useReportData = () => {
-  const { transactions } = useData();
+  const { data: transactionInfo, isLoading, refetch } = useTransactions();
+  const transactions = (transactionInfo?.transactions || []) as unknown as Transaction[];
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -79,7 +81,7 @@ export const useReportData = () => {
         iconColor: '#f59e0b',
         iconBg: 'bg-amber-100',
         title: 'Cảnh báo tiết kiệm',
-        description: `Bạn chỉ tiết kiệm được ${stats.savingsRate.toFixed(1)}% thu nhập. Hãy xem xét cắt giảm chi tiêu không cần thiết.`,
+        description: `Bạn chỉ tiết kiệm được ${(stats?.savingsRate || 0).toFixed(1)}% thu nhập. Hãy xem xét cắt giảm chi tiêu không cần thiết.`,
       });
     }
 
@@ -118,9 +120,10 @@ export const useReportData = () => {
     return result;
   }, [stats, topExpenses, dailyAvgExpense, comparison]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    await refetch();
+    setRefreshing(false);
   };
 
   return {
@@ -128,7 +131,7 @@ export const useReportData = () => {
     selectedPeriod,
     setSelectedPeriod,
     refreshing,
-    
+
     // Data
     currentTransactions,
     stats,
@@ -137,7 +140,7 @@ export const useReportData = () => {
     incomeBreakdown,
     trendData,
     insights,
-    
+
     // Actions
     onRefresh,
   };

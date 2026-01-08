@@ -1,15 +1,15 @@
 // API Services - Export all services
-export { apiClient } from './apiClient';
+export { apiClient, setAuthFailureCallback } from './apiClient';
 export type { ApiResponse, ApiError } from './apiClient';
 
 export { authService } from './authService';
 export type { User, LoginRequest, RegisterRequest, LoginResponse } from './authService';
 
 export { accountService } from './accountService';
-export type { 
-  Account, 
-  AccountType, 
-  CreateAccountRequest, 
+export type {
+  Account,
+  AccountType,
+  CreateAccountRequest,
   UpdateAccountRequest,
   AccountSummary,
   Transfer,
@@ -17,17 +17,17 @@ export type {
 } from './accountService';
 
 export { transactionService } from './transactionService';
-export type { 
-  Transaction, 
+export type {
+  Transaction,
   TransactionType,
-  CreateTransactionRequest, 
+  CreateTransactionRequest,
   UpdateTransactionRequest,
   TransactionFilters,
 } from './transactionService';
 
 export { dashboardService } from './dashboardService';
-export type { 
-  DashboardData, 
+export type {
+  DashboardData,
   DashboardSummary,
   Period,
   CategorySummary,
@@ -36,7 +36,7 @@ export type {
 } from './dashboardService';
 
 export { reportService } from './reportService';
-export type { 
+export type {
   ReportType,
   MonthlyReportResponse,
   YearlyReportResponse,
@@ -45,8 +45,8 @@ export type {
 } from './reportService';
 
 export { notificationApiService } from './notificationApiService';
-export type { 
-  Notification, 
+export type {
+  Notification,
   NotificationType,
   NotificationCategory,
   CreateNotificationRequest,

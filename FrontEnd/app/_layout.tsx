@@ -1,5 +1,7 @@
 // e:\DuAnThucTap\FrontEnd\app\_layout.tsx
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Colors } from '../constants/Colors';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { DataProvider, useData } from '../contexts/DataContext';
@@ -12,7 +14,14 @@ import UndoSnackbar from '../components/ui/UndoSnackbar';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
-import { View } from 'react-native';
+import { View, LogBox } from 'react-native';
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+// Suppress Reanimated reading from value warnings if they come from third-party libraries
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Disable strict mode to suppress the render-phase warning
+});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,7 +38,17 @@ function UndoSnackbarWrapper() {
   );
 }
 
-// Inner layout with navigation – now just renders the Slot
+// Inner layout with navigation
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Outfit_400Regular,
@@ -47,20 +66,23 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <I18nextProvider i18n={i18n}>
-        <SettingsProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <DataProvider>
-                <Slot />
-                {/* Nếu muốn hiển thị Snackbar, bỏ comment dòng dưới */}
-                <UndoSnackbarWrapper />
-              </DataProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </SettingsProvider>
-      </I18nextProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <I18nextProvider i18n={i18n}>
+          <SettingsProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <DataProvider>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(app)" options={{ headerShown: false }} />
+                  </Stack>
+                  <UndoSnackbarWrapper />
+                </DataProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </SettingsProvider>
+        </I18nextProvider>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }

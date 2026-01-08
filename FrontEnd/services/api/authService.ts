@@ -28,7 +28,7 @@ export interface AuthTokens {
 
 export interface LoginResponse {
   user: User;
-  token: string;
+  accessToken: string;
   refreshToken: string;
   expiresIn: string;
 }
@@ -55,7 +55,7 @@ export const authService = {
 
     if (response.success && response.data) {
       // Store token and user info
-      await apiClient.setAuthToken(response.data.token);
+      await apiClient.setAuthToken(response.data.accessToken);
       if (response.data.refreshToken) {
         await apiClient.setRefreshToken(response.data.refreshToken);
       }
@@ -129,5 +129,13 @@ export const authService = {
     }
 
     return response;
+  },
+
+  /**
+   * Login with existing token (Social Login)
+   */
+  async loginWithToken(user: User, token: string): Promise<void> {
+    await apiClient.setAuthToken(token);
+    await apiClient.setUser(user);
   },
 };
