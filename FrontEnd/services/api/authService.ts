@@ -54,8 +54,12 @@ export const authService = {
     });
 
     if (response.success && response.data) {
+      // Store token and user info
       await apiClient.setAuthToken(response.data.token);
-      await apiClient.setRefreshToken(response.data.refreshToken);
+      if (response.data.refreshToken) {
+        await apiClient.setRefreshToken(response.data.refreshToken);
+      }
+      await apiClient.setUser(response.data.user);
     }
 
     return response;
@@ -65,9 +69,15 @@ export const authService = {
    * Đăng ký
    */
   async register(data: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
-    return apiClient.post<RegisterResponse>('/auth/register', data, {
+    const response = await apiClient.post<RegisterResponse>('/auth/register', data, {
       requiresAuth: false,
     });
+
+    if (response.success && response.data) {
+      await apiClient.setUser(response.data.user);
+    }
+
+    return response;
   },
 
   /**
@@ -75,6 +85,7 @@ export const authService = {
    */
   async logout(): Promise<void> {
     await apiClient.clearTokens();
+    await apiClient.clearUser();
   },
 
   /**
@@ -89,6 +100,13 @@ export const authService = {
    */
   async isLoggedIn(): Promise<boolean> {
     return apiClient.isAuthenticated();
+  },
+
+  /**
+   * Get cached user from storage
+   */
+  async getCachedUser(): Promise<User | null> {
+    return apiClient.getUser();
   },
 
   /**

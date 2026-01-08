@@ -4,7 +4,8 @@ import { recurringStorage } from '../lib/recurringStorage';
 import { RecurringTransaction } from '../types/transaction';
 import { notificationService } from '../services/notificationService';
 import { transactionService } from '../services/api/transactionService';
-import { accountService } from '../services/api/accountService';
+import { accountService, Account } from '../services/api/accountService';
+import { categoryService, Category } from '../services/api/categoryService';
 
 import { registerRecurringTask } from '../tasks/recurring-task';
 
@@ -21,6 +22,7 @@ export interface Transaction {
   recurringId?: string; // Link to recurring transaction
   categoryId?: string;
   accountId?: string;
+  paymentMethod?: string;
 }
 
 export interface Budget {
@@ -59,9 +61,11 @@ interface DataContextType {
   filteredTransactions: Transaction[];
   budgets: Budget[];
   recurringTransactions: RecurringTransaction[];
+  categories: Category[];
+  accounts: Account[];
   loading: boolean;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
-  updateTransaction: (transaction: Transaction) => Promise<void>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => void;
   undoDelete: () => void;
   showUndoSnackbar: boolean;
@@ -77,6 +81,7 @@ interface DataContextType {
   updateRecurringTransaction: (recurring: RecurringTransaction) => Promise<void>;
   deleteRecurringTransaction: (id: string) => Promise<void>;
   toggleRecurringTransaction: (id: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -86,6 +91,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
   const recentlyDeleted = useRef<{ transaction: Transaction; timeoutId: ReturnType<typeof setTimeout> } | null>(null);
@@ -100,66 +107,79 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setFiltersState(prev => ({ ...prev, ...newFilters }));
   };
 
-  // --- Data Loading & Persistence ---
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Request notification permissions
+      await notificationService.requestPermissions();
+
       try {
-        // Request notification permissions
-        await notificationService.requestPermissions();
+        // Load Transactions
+        const transactionRes = await transactionService.getTransactions({}, {
+          limit: 1000
+        });
 
-        try {
-          // Pass empty filters as first arg, pagination as second arg
-          const transactionRes = await transactionService.getTransactions({}, {
-            limit: 1000
-          });
-
-          if (transactionRes.success && transactionRes.data) {
-            const apiTransactions = transactionRes.data.transactions.map((t: any) => ({
-              id: t.id,
-              title: t.title || t.category || 'Untitled', // Fallback title
-              amount: t.amount,
-              type: t.type,
-              category: t.category, // Now a string thanks to backend fix
-              categoryId: t.categoryId,
-              date: t.date,
-              note: t.note || '',
-              receiptImage: t.receiptImage,
-              accountId: t.accountId,
-              recurringId: t.recurringId
-            }));
-            setTransactions(apiTransactions);
-          } else {
-            console.warn("Failed to fetch transactions:", transactionRes.message);
-            // Fallback to local storage or empty?
-            // For now, let's try local storage as cache/fallback
-            let storedTransactions = await getData('transactions');
-            if (storedTransactions) setTransactions(storedTransactions);
-          }
-        } catch (apiError) {
-          console.error("API error loading transactions:", apiError);
+        if (transactionRes.success && transactionRes.data) {
+          const apiTransactions = transactionRes.data.transactions.map((t: any) => ({
+            id: t.id,
+            title: t.title || t.category || 'Untitled', // Fallback title
+            amount: t.amount,
+            type: t.type,
+            category: t.category, // Now a string thanks to backend fix
+            categoryId: t.categoryId,
+            date: t.date,
+            note: t.note || '',
+            receiptImage: t.receiptImage,
+            accountId: t.accountId,
+            recurringId: t.recurringId,
+            paymentMethod: t.account?.name || t.paymentMethod
+          }));
+          setTransactions(apiTransactions);
+        } else {
+          console.warn("Failed to fetch transactions:", transactionRes.message);
           let storedTransactions = await getData('transactions');
           if (storedTransactions) setTransactions(storedTransactions);
         }
 
-        let storedBudgets = await getData('budgets');
-        if (storedBudgets === null || storedBudgets.length === 0) {
-          storedBudgets = MOCK_BUDGETS;
-          await storeData('budgets', storedBudgets);
+        // Load Categories
+        const categoryRes = await categoryService.getCategories();
+        if (categoryRes.success && categoryRes.data) {
+          setCategories(categoryRes.data);
         }
 
-        // Load recurring transactions
-        const storedRecurring = await recurringStorage.getAll();
+        // Load Accounts
+        const accountRes = await accountService.getAccounts();
+        if (accountRes.success && accountRes.data) {
+          setAccounts(accountRes.data.accounts);
+        }
 
-        setBudgets(storedBudgets);
-        setRecurringTransactions(storedRecurring);
-      } catch (error) {
-        console.error("Failed to load data:", error);
-        // Fallback to local storage if everything fails
-      } finally {
-        setLoading(false);
+      } catch (apiError) {
+        console.error("API error loading data:", apiError);
+        let storedTransactions = await getData('transactions');
+        if (storedTransactions) setTransactions(storedTransactions);
       }
-    };
+
+      let storedBudgets = await getData('budgets');
+      if (storedBudgets === null || storedBudgets.length === 0) {
+        storedBudgets = MOCK_BUDGETS;
+        await storeData('budgets', storedBudgets);
+      }
+
+      // Load recurring transactions
+      const storedRecurring = await recurringStorage.getAll();
+
+      setBudgets(storedBudgets);
+      setRecurringTransactions(storedRecurring);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      // Fallback to local storage if everything fails
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Data Loading & Persistence ---
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -212,7 +232,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       date: transaction.date,
       note: transaction.note,
       receiptImage: transaction.receiptImage || undefined,
-      accountId: transaction.accountId
+      accountId: transaction.accountId,
+      paymentMethod: transaction.paymentMethod
     };
 
     try {
@@ -228,37 +249,57 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           date: response.data.date,
           note: response.data.note || '',
           receiptImage: response.data.receiptImage,
-          accountId: response.data.accountId
+          accountId: response.data.accountId,
+          recurringId: response.data.recurringId,
+          paymentMethod: transaction.paymentMethod
         };
         const updatedTransactions = [newTransaction, ...transactions];
         setTransactions(updatedTransactions);
         await storeData('transactions', updatedTransactions);
+
+        // Refresh account balance if needed
+        if (transaction.accountId) {
+          const accountRes = await accountService.getAccounts();
+          if (accountRes.success && accountRes.data) {
+            setAccounts(accountRes.data.accounts);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to create transaction:", error);
     }
   };
 
-  const updateTransaction = async (updatedTransaction: Transaction) => {
+  const updateTransaction = async (id: string, updatedData: Partial<Transaction>) => {
     dismissUndo(); // Confirm any pending deletion
 
+    const originalTransaction = transactions.find(t => t.id === id);
+    if (!originalTransaction) return;
+
     const payload = {
-      title: updatedTransaction.title,
-      type: updatedTransaction.type,
-      category: updatedTransaction.category,
-      amount: updatedTransaction.amount,
-      date: updatedTransaction.date,
-      note: updatedTransaction.note,
-      receiptImage: updatedTransaction.receiptImage || undefined,
-      accountId: updatedTransaction.accountId
+      title: updatedData.title || originalTransaction.title,
+      type: updatedData.type || originalTransaction.type,
+      category: updatedData.category || originalTransaction.category,
+      amount: updatedData.amount || originalTransaction.amount,
+      date: updatedData.date || originalTransaction.date,
+      note: updatedData.note || originalTransaction.note,
+      receiptImage: updatedData.receiptImage || undefined,
+      accountId: updatedData.accountId || originalTransaction.accountId,
+      paymentMethod: updatedData.paymentMethod || originalTransaction.paymentMethod
     };
 
     try {
-      const response = await transactionService.updateTransaction(updatedTransaction.id, payload);
+      const response = await transactionService.updateTransaction(id, payload);
       if (response.success) {
-        const finalList = transactions.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
+        const finalList = transactions.map(t => t.id === id ? { ...t, ...updatedData } : t);
         setTransactions(finalList);
         await storeData('transactions', finalList);
+
+        // Refresh account balance
+        const accountRes = await accountService.getAccounts();
+        if (accountRes.success && accountRes.data) {
+          setAccounts(accountRes.data.accounts);
+        }
       }
     } catch (error) {
       console.error("Failed to update transaction:", error);
@@ -389,11 +430,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <DataContext.Provider value={{
-      transactions, budgets, recurringTransactions, loading,
+      transactions, budgets, recurringTransactions, categories, accounts, loading,
       addTransaction, updateTransaction, deleteTransaction, undoDelete, showUndoSnackbar, dismissUndo,
       filteredTransactions, searchQuery, setSearchQuery, sortOrder, setSortOrder, filters, setFilters,
       addRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction,
-      toggleRecurringTransaction
+      toggleRecurringTransaction, refreshData: loadData
     }}>
       {children}
     </DataContext.Provider>

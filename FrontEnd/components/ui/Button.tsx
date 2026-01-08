@@ -1,7 +1,8 @@
 import React from 'react';
-import { TouchableOpacity, TouchableOpacityProps, ActivityIndicator, View } from 'react-native';
+import { TouchableOpacity, TouchableOpacityProps, ActivityIndicator, View, Text } from 'react-native';
 import { cn } from '../../lib/utils';
 import { Typography } from './Typography';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface ButtonProps extends TouchableOpacityProps {
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
@@ -25,43 +26,33 @@ export function Button({
     ...props
 }: ButtonProps) {
 
-    const baseStyles = "flex-row items-center justify-center rounded-2xl active:opacity-80";
+    const baseStyles = "flex-row items-center justify-center rounded-full active:opacity-90 active:scale-95 transition-all overflow-hidden";
 
     const variants = {
-        primary: "bg-primary shadow-lg shadow-primary/30",
-        secondary: "bg-secondary",
-        outline: "border border-input bg-background",
-        ghost: "bg-transparent hover:bg-accent hover:text-accent-foreground",
+        primary: "shadow-lg shadow-primary/40 border-0", // Color handled by Gradient
+        secondary: "bg-secondary border border-transparent",
+        outline: "border border-input bg-transparent",
+        ghost: "bg-transparent",
         destructive: "bg-destructive shadow-sm",
     };
 
     const sizes = {
-        default: "h-14 px-6 py-3",
-        sm: "h-10 rounded-xl px-4",
-        lg: "h-16 rounded-3xl px-8",
+        default: "h-14 px-8",
+        sm: "h-10 px-5",
+        lg: "h-16 px-10",
         icon: "h-12 w-12",
     };
 
     const textVariants = {
-        primary: "text-primary-foreground font-semibold",
-        secondary: "text-secondary-foreground font-medium",
-        outline: "text-foreground font-medium",
+        primary: "text-white font-bold tracking-wide",
+        secondary: "text-secondary-foreground font-semibold",
+        outline: "text-foreground font-semibold",
         ghost: "text-foreground font-medium",
         destructive: "text-destructive-foreground font-semibold",
     };
 
-    return (
-        <TouchableOpacity
-            className={cn(
-                baseStyles,
-                variants[variant],
-                sizes[size],
-                (disabled || loading) && "opacity-50",
-                className
-            )}
-            disabled={disabled || loading}
-            {...props}
-        >
+    const content = (
+        <>
             {loading ? (
                 <ActivityIndicator color={variant === 'outline' || variant === 'ghost' ? 'black' : 'white'} />
             ) : (
@@ -76,6 +67,40 @@ export function Button({
                     ) : children}
                 </>
             )}
+        </>
+    );
+
+    if (variant === 'primary' && !disabled && !loading) {
+        return (
+            <TouchableOpacity
+                className={cn(baseStyles, sizes[size], variants[variant], className)}
+                disabled={disabled || loading}
+                {...props}
+            >
+                <LinearGradient
+                    colors={['#8B5CF6', '#7C3AED']} // Violet 500 -> Violet 600
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    className="absolute inset-0"
+                />
+                {content}
+            </TouchableOpacity>
+        );
+    }
+
+    return (
+        <TouchableOpacity
+            className={cn(
+                baseStyles,
+                variants[variant],
+                sizes[size],
+                (disabled || loading) && "opacity-50",
+                className
+            )}
+            disabled={disabled || loading}
+            {...props}
+        >
+            {content}
         </TouchableOpacity>
     );
 }
