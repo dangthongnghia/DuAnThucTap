@@ -8,6 +8,7 @@ export { useReportData } from './useReportData';
 
 // API Hooks
 export { useAuth } from './useAuth';
+export { useTransactions } from './useTransactions';
 export { useAccounts, useAccountSummary } from './useAccounts';
 export { useDashboard } from './useDashboard';
 export { useReports } from './useReports';

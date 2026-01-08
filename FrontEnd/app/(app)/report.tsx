@@ -52,20 +52,6 @@ export default function ReportScreen() {
     decimalPlaces: 0,
   };
 
-  const StatCard = ({ title, amount, icon, type }: any) => (
-    <Card className="flex-1 p-4 flex-row items-center justify-between">
-      <View>
-        <Text className="text-muted-foreground text-xs mb-1">{title}</Text>
-        <Text className={`text-lg font-bold ${type === 'income' ? 'text-green-500' : type === 'expense' ? 'text-red-500' : 'text-primary'}`}>
-          {formatCurrency(amount)}
-        </Text>
-      </View>
-      <View className={`p-2 rounded-full ${type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : type === 'expense' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-primary/10'}`}>
-        {icon}
-      </View>
-    </Card>
-  );
-
   // Transform trendData for chart
   const chartData = {
     labels: trendData.map(d => {
@@ -161,49 +147,44 @@ export default function ReportScreen() {
         </View>
 
         {/* Trend Chart */}
-        <View className="px-6 mb-6">
+        {/* <View className="px-6 mb-6">
           <Text className="text-lg font-bold mb-4 text-foreground">Trend Analysis</Text>
           <Card className="p-0 overflow-hidden items-center pt-4">
             {trendData.length > 0 ? (
-              <LineChart
-                data={chartData}
-                width={width - 48 - 32} // Card width minus padding
-                height={220}
-                chartConfig={chartConfig}
-                bezier
-                style={{ borderRadius: 16 }}
-                withInnerLines={false}
-                withOuterLines={false}
-              />
+              <View style={{ height: 220, justifyContent: 'center', alignItems: 'center' }}>
+                <Text>Chart temporarily disabled for debugging</Text>
+              </View>
             ) : (
               <View className="h-[220px] items-center justify-center">
                 <Text className="text-muted-foreground">No data available</Text>
               </View>
             )}
           </Card>
-        </View>
+        </View> */}
 
         {/* Insights */}
-        {insights.length > 0 && (
-          <View className="px-6 mb-6">
-            <Text className="text-lg font-bold mb-4 text-foreground">Insights</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-6 px-6">
-              {insights.map((insight, index) => (
-                <Card key={index} className="mr-4 w-64 p-4">
-                  <View className={`h-10 w-10 rounded-full items-center justify-center mb-3 ${insight.iconBg}`}>
-                    {insight.icon === 'trophy' && <Award size={20} color={insight.iconColor} />}
-                    {insight.icon === 'warning' && <AlertCircle size={20} color={insight.iconColor} />}
-                    {insight.icon === 'analytics' && <TrendingDown size={20} color={insight.iconColor} />}
-                    {insight.icon === 'calendar' && <Calendar size={20} color={insight.iconColor} />}
-                    {insight.icon === 'alert-circle' && <AlertCircle size={20} color={insight.iconColor} />}
-                  </View>
-                  <Text className="font-semibold mb-1 text-foreground">{insight.title}</Text>
-                  <Text className="text-muted-foreground text-xs">{insight.description}</Text>
-                </Card>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        {/* {
+          insights.length > 0 && (
+            <View className="px-6 mb-6">
+              <Text className="text-lg font-bold mb-4 text-foreground">Insights</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-6 px-6">
+                {insights.map((insight, index) => (
+                  <Card key={index} className="mr-4 w-64 p-4">
+                    <View className={`h-10 w-10 rounded-full items-center justify-center mb-3 ${insight.iconBg}`}>
+                      {insight.icon === 'trophy' && <Award size={20} color={insight.iconColor} />}
+                      {insight.icon === 'warning' && <AlertCircle size={20} color={insight.iconColor} />}
+                      {insight.icon === 'analytics' && <TrendingDown size={20} color={insight.iconColor} />}
+                      {insight.icon === 'calendar' && <Calendar size={20} color={insight.iconColor} />}
+                      {insight.icon === 'alert-circle' && <AlertCircle size={20} color={insight.iconColor} />}
+                    </View>
+                    <Text className="font-semibold mb-1 text-foreground">{insight.title}</Text>
+                    <Text className="text-muted-foreground text-xs">{insight.description}</Text>
+                  </Card>
+                ))}
+              </ScrollView>
+            </View>
+          )
+        } */}
 
         {/* Expense Breakdown */}
         <View className="px-6 mb-6">
@@ -242,3 +223,17 @@ export default function ReportScreen() {
     </ScreenWrapper>
   );
 }
+
+const StatCard = ({ title, amount, icon, type }: any) => (
+  <Card className="flex-1 p-4 flex-row items-center justify-between">
+    <View>
+      <Text className="text-muted-foreground text-xs mb-1">{title}</Text>
+      <Text className={`text-lg font-bold ${type === 'income' ? 'text-green-500' : type === 'expense' ? 'text-red-500' : 'text-primary'}`}>
+        {formatCurrency(amount)}
+      </Text>
+    </View>
+    <View className={`p-2 rounded-full ${type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : type === 'expense' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-primary/10'}`}>
+      {icon}
+    </View>
+  </Card>
+);

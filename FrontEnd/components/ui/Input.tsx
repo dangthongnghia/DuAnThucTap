@@ -28,14 +28,14 @@ export function Input({
                 </Typography>
             )}
             <View className={cn(
-                "flex-row items-center rounded-2xl border border-input bg-background px-4 py-3",
-                "focus:border-primary focus:ring-1 focus:ring-primary",
-                error && "border-destructive",
+                "flex-row items-center rounded-3xl border border-transparent bg-secondary px-5 py-4 transition-all",
+                "focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/20",
+                error && "border-destructive bg-destructive/5",
                 className
             )}>
                 {leftIcon && <View className="mr-3 text-muted-foreground">{leftIcon}</View>}
                 <TextInput
-                    className="flex-1 text-base text-foreground placeholder:text-muted-foreground"
+                    className="flex-1 text-base text-foreground placeholder:text-muted-foreground font-medium"
                     placeholderTextColor="hsl(var(--muted-foreground))"
                     {...props}
                 />

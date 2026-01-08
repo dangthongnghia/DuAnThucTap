@@ -3,7 +3,7 @@ import { View, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Pl
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Typography } from '../../components/ui/Typography';
-import { Button } from '../../components/ui/Button';import { useData } from '../../contexts/DataContext';
+import { Button } from '../../components/ui/Button'; import { useData } from '../../contexts/DataContext';
 import { CategorySelectorModal } from '../../components/Modal/CategorySelectorModal';
 import { PaymentMethodSelectorModal } from '../../components/Modal/PaymentMethodSelectorModal';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -42,8 +42,11 @@ export default function AddOrEditScreen() {
   const [date, setDate] = useState(
     existingTransaction ? new Date(existingTransaction.date) : new Date()
   );
-  const [paymentMethod, setPaymentMethod] = useState(
-    existingTransaction?.paymentMethod || '1' // Default to Cash (id: '1')
+  const [paymentMethodName, setPaymentMethodName] = useState(
+    existingTransaction?.paymentMethod || 'Cash'
+  );
+  const [accountId, setAccountId] = useState(
+    existingTransaction?.accountId || ''
   );
   const [note, setNote] = useState(existingTransaction?.note || '');
 
@@ -79,7 +82,8 @@ export default function AddOrEditScreen() {
         category,
         date: date.toISOString(),
         type: transactionType,
-        paymentMethod,
+        paymentMethod: paymentMethodName,
+        accountId: accountId || undefined,
         note: note || '',
       };
 
@@ -104,8 +108,8 @@ export default function AddOrEditScreen() {
       >
         {/* Header */}
         <View className="px-6 pt-4 pb-2 flex-row items-center bg-background">
-          <TouchableOpacity 
-            onPress={() => router.back()} 
+          <TouchableOpacity
+            onPress={() => router.back()}
             className="mr-4 p-2 -ml-2 rounded-full active:bg-secondary"
           >
             <ArrowLeft size={24} color={theme.foreground} />
@@ -122,13 +126,13 @@ export default function AddOrEditScreen() {
               style={
                 transactionType === 'expense'
                   ? {
-                      backgroundColor: '#ef4444', // bg-red-500
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 1.41,
-                      elevation: 2,
-                    }
+                    backgroundColor: '#ef4444', // bg-red-500
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 1.41,
+                    elevation: 2,
+                  }
                   : {}
               }
               className={'flex-1 py-3 rounded-xl items-center'}
@@ -145,13 +149,13 @@ export default function AddOrEditScreen() {
               style={
                 transactionType === 'income'
                   ? {
-                      backgroundColor: '#22c55e', // bg-green-500
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 1.41,
-                      elevation: 2,
-                    }
+                    backgroundColor: '#22c55e', // bg-green-500
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 1.41,
+                    elevation: 2,
+                  }
                   : {}
               }
               className={'flex-1 py-3 rounded-xl items-center'}
@@ -171,9 +175,8 @@ export default function AddOrEditScreen() {
             <Typography variant="caption" className="mb-2">Amount</Typography>
             <View className="flex-row items-center">
               <TextInput
-                className={`text-5xl font-bold text-center min-w-[100px] ${
-                  transactionType === 'expense' ? 'text-red-500' : 'text-green-500'
-                }`}
+                className={`text-5xl font-bold text-center min-w-[100px] ${transactionType === 'expense' ? 'text-red-500' : 'text-green-500'
+                  }`}
                 value={amount}
                 onChangeText={handleAmountChange}
                 placeholder="0"
@@ -204,7 +207,7 @@ export default function AddOrEditScreen() {
             <FormItem
               icon={<Wallet size={24} color={theme.primary} />}
               label="Payment Method"
-              value={paymentMethod}
+              value={paymentMethodName}
               onPress={() => setPaymentSelectorVisible(true)}
             />
 
@@ -248,10 +251,11 @@ export default function AddOrEditScreen() {
         visible={isPaymentSelectorVisible}
         onClose={() => setPaymentSelectorVisible(false)}
         onSelect={(method) => {
-          setPaymentMethod(method);
+          setPaymentMethodName(method.name);
+          setAccountId(method.id);
           setPaymentSelectorVisible(false);
         }}
-        currentMethod={paymentMethod}
+        currentMethodId={accountId}
       />
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
@@ -268,15 +272,15 @@ export default function AddOrEditScreen() {
   );
 }
 
-const FormItem = ({ 
-  icon, 
-  label, 
-  value, 
-  onPress 
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string; 
+const FormItem = ({
+  icon,
+  label,
+  value,
+  onPress
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
   onPress: () => void;
 }) => (
   <TouchableOpacity

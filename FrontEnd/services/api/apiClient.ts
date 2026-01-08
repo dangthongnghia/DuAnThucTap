@@ -1,14 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL cho API - Thay đổi theo môi trường
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://be-easy-fin.vercel.app/api';
+// Sử dụng environment variable hoặc fallback về production
+const API_BASE_URL = 
+  process.env.EXPO_PUBLIC_API_URL || 
+  'https://be-easy-fin.vercel.app/api';
 
-// Token storage key
-const TOKEN_KEY = 'authToken';
+// Token storage keys
+const TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
+const USER_KEY = 'user';
 
 // Request timeout
 const REQUEST_TIMEOUT = 30000;
+
+// Global error callback
+let globalErrorCallback: ((error: ApiError) => void) | null = null;
+let authFailureCallback: (() => void) | null = null;
 
 /**
  * API Response interface
@@ -26,6 +34,7 @@ export interface ApiError {
   success: false;
   message: string;
   code?: string;
+  payload?: any;
 }
 
 /**
@@ -37,6 +46,20 @@ interface RequestOptions {
   headers?: Record<string, string>;
   requiresAuth?: boolean;
   timeout?: number;
+}
+
+/**
+ * Set global error callback for handling API errors
+ */
+export function setGlobalErrorCallback(callback: (error: ApiError) => void) {
+  globalErrorCallback = callback;
+}
+
+/**
+ * Set auth failure callback for handling 401/403 errors
+ */
+export function setAuthFailureCallback(callback: () => void) {
+  authFailureCallback = callback;
 }
 
 /**
@@ -97,7 +120,33 @@ class ApiClient {
    */
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getAuthToken();
-    return token !== null;
+    return token !== null && token.length > 0;
+  }
+
+  /**
+   * Get stored user data
+   */
+  async getUser(): Promise<any | null> {
+    try {
+      const userData = await AsyncStorage.getItem(USER_KEY);
+      return userData ? JSON.parse(userData) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Store user data
+   */
+  async setUser(user: any): Promise<void> {
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  /**
+   * Clear user data
+   */
+  async clearUser(): Promise<void> {
+    await AsyncStorage.removeItem(USER_KEY);
   }
 
   /**
@@ -167,39 +216,122 @@ class ApiClient {
 
     try {
       const response = await this.fetchWithTimeout(url, requestOptions, timeout);
-      const data = await response.json();
 
+      // Try to parse response
+      let data: any;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // For non-JSON responses (204 No Content, etc)
+        data = response.ok ? {} : { success: false, message: 'Invalid response format' };
+      }
+
+      // Handle HTTP errors
       if (!response.ok) {
-        // Handle 401 - Token expired
-        if (response.status === 401 && requiresAuth) {
+        const errorMessage = 
+          data?.message || 
+          data?.error?.message || 
+          `HTTP ${response.status}: ${response.statusText}`;
+
+        // Handle 401/403 - Unauthorized
+        if ((response.status === 401 || response.status === 403) && requiresAuth) {
           await this.clearTokens();
-          // Có thể emit event để redirect về login
+          await this.clearUser();
+          
+          if (authFailureCallback) {
+            authFailureCallback();
+          }
+
+          const error: ApiError = {
+            success: false,
+            message: 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.',
+            code: response.status.toString(),
+          };
+
+          if (globalErrorCallback) {
+            globalErrorCallback(error);
+          }
+
+          return {
+            success: false,
+            message: error.message,
+          };
+        }
+
+        const error: ApiError = {
+          success: false,
+          message: errorMessage,
+          code: response.status.toString(),
+          payload: data,
+        };
+
+        if (globalErrorCallback) {
+          globalErrorCallback(error);
         }
 
         return {
           success: false,
-          message: data.message || 'Đã xảy ra lỗi',
+          message: errorMessage,
           data: data,
         };
       }
 
-      return data as ApiResponse<T>;
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          return {
-            success: false,
-            message: 'Request timeout',
-          };
-        }
+      // Handle successful response
+      // Backend có thể trả về response với cấu trúc { success, data, message }
+      // hoặc chỉ trả về data trực tiếp
+      if (data.success === false) {
         return {
           success: false,
-          message: error.message || 'Network error',
+          message: data.message || 'Unknown error',
+          data: data,
         };
       }
+
+      // If response has 'data' field, wrap it properly
+      if (data.data !== undefined && !data.success) {
+        return data;
+      }
+
+      // If response structure is { success, data, ... }
+      if ('success' in data) {
+        return data as ApiResponse<T>;
+      }
+
+      // Otherwise wrap the response in standard format
+      return {
+        success: true,
+        data: data as T,
+      };
+
+    } catch (error) {
+      let errorMessage = 'Network error';
+      let errorCode = 'NETWORK_ERROR';
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Request timeout - vui lòng thử lại';
+          errorCode = 'TIMEOUT';
+        } else {
+          errorMessage = error.message;
+          errorCode = error.name || 'UNKNOWN_ERROR';
+        }
+      }
+
+      const apiError: ApiError = {
+        success: false,
+        message: errorMessage,
+        code: errorCode,
+      };
+
+      if (globalErrorCallback) {
+        globalErrorCallback(apiError);
+      }
+
       return {
         success: false,
-        message: 'Unknown error occurred',
+        message: errorMessage,
       };
     }
   }

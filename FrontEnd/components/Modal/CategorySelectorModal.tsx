@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { SheetBottom } from '../Sheet/SheetBottom';
 import { CategorySelector } from '../Category/CategorySelector';
-import { Category, expenseCategories, incomeCategories } from '../../constants/categories';
+import { useData } from '../../contexts/DataContext';
+import { Category } from '../../services/api/categoryService';
 
 interface CategorySelectorModalProps {
   visible: boolean;
@@ -17,15 +18,38 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
   onSelect,
   type,
 }) => {
-  const categories = type === 'expense' ? expenseCategories : incomeCategories;
-  
+  const { categories } = useData();
+
+  // Filter categories by type
+  const filteredCategories = categories.filter(c => c.type === type && c.isActive);
+
   const handleCategorySelect = (category: Category) => {
-    onSelect(category.title);
+    onSelect(category.name);
     onClose();
   };
 
-  // Find a default selected category (first one)
-  const defaultCategory = categories[0];
+  // Find a default selected category (first one) or null
+  const defaultCategory = filteredCategories.length > 0 ? filteredCategories[0] : undefined;
+
+  // We need to map API Category to Component expected format if they differ
+  // CategorySelector expects { id, title, icon, color, keywords? }
+  // API Category is { id, name, type, icon?, color?, isSystem... }
+  // We need to adapt it. CategorySelector uses 'title', API uses 'name'.
+
+  const adaptedCategories = filteredCategories.map(c => ({
+    id: c.id,
+    title: c.name,
+    icon: (c.icon || 'help-circle-outline') as any, // Cast to any to bypass exact icon name check for now
+    color: c.color || '#cccccc',
+    keywords: []
+  }));
+
+  const adaptedDefault = defaultCategory ? {
+    id: defaultCategory.id,
+    title: defaultCategory.name,
+    icon: (defaultCategory.icon || 'help-circle-outline') as any,
+    color: defaultCategory.color || '#cccccc'
+  } : undefined;
 
   return (
     <SheetBottom
@@ -36,9 +60,9 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
     >
       <View style={{ padding: 16 }}>
         <CategorySelector
-          categories={categories}
-          selectedCategory={defaultCategory}
-          onSelect={handleCategorySelect}
+          categories={adaptedCategories}
+          selectedCategory={adaptedDefault!}
+          onSelect={(c) => onSelect(c.title)}
         />
       </View>
     </SheetBottom>

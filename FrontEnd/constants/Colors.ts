@@ -1,26 +1,26 @@
 export const Colors = {
     light: {
-        background: '#FFFFFF',
-        foreground: '#0A0A0A',
-        primary: '#7F3DFF',
-        secondary: '#F3F4F6',
-        muted: '#F3F4F6',
-        mutedForeground: '#737373',
-        destructive: '#EF4444',
-        border: '#E5E7EB',
-        input: '#E5E7EB',
+        background: '#FFFFFF', // Pure White
+        foreground: '#09090B', // Zinc 950
+        primary: '#7C3AED', // Violet 600
+        secondary: '#F4F4F5', // Zinc 100
+        muted: '#F4F4F5', // Zinc 100
+        mutedForeground: '#71717A', // Zinc 500
+        destructive: '#EF4444', // Red 500
+        border: '#E4E4E7', // Zinc 200
+        input: '#E4E4E7', // Zinc 200
         card: '#FFFFFF',
     },
     dark: {
-        background: '#0B0E14',
-        foreground: '#FAFAFA',
-        primary: '#8B5CF6',
-        secondary: '#1F2937',
-        muted: '#1F2937',
-        mutedForeground: '#A3A3A3',
-        destructive: '#991B1B',
-        border: '#1F2937',
-        input: '#1F2937',
-        card: '#111827',
+        background: '#09090B', // Zinc 950
+        foreground: '#FAFAFA', // Zinc 50
+        primary: '#8B5CF6', // Violet 500
+        secondary: '#27272A', // Zinc 800
+        muted: '#27272A', // Zinc 800
+        mutedForeground: '#A1A1AA', // Zinc 400
+        destructive: '#7F1D1D', // Red 900
+        border: '#27272A', // Zinc 800
+        input: '#27272A', // Zinc 800
+        card: '#18181B', // Zinc 900
     },
 };

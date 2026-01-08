@@ -4,11 +4,9 @@
 
 @layer base {
   :root {
-    /* Base Colors - Light Mode */
-    --background: 255 100% 100%;
-    /* Pure White */
+    /* Base Colors - Light Mode (Zinc-based) */
+    --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
-    /* Dark Grey */
 
     /* Card & Surfaces */
     --card: 0 0% 100%;
@@ -16,12 +14,12 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* Primary Brand Color - Vibrant Violet/Purple */
+    /* Primary Brand Color - Deep Violet */
     --primary: 262 83% 58%;
-    /* #7F3DFF */
+    /* #7C3AED */
     --primary-foreground: 210 40% 98%;
 
-    /* Secondary - Soft Blue/Grey */
+    /* Secondary - Zinc */
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
 
@@ -29,12 +27,11 @@
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
 
-    /* Accent - For highlights */
+    /* Accent */
     --accent: 262 83% 96%;
-    /* Very light purple */
     --accent-foreground: 262 83% 58%;
 
-    /* Destructive - Red */
+    /* Destructive */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
@@ -45,7 +42,6 @@
 
     /* Radius */
     --radius: 1rem;
-    /* 16px for modern rounded look */
 
     /* Chart Colors */
     --chart-1: 262 83% 58%;
@@ -56,41 +52,39 @@
   }
 
   .dark {
-    /* Base Colors - Dark Mode - Deep Blue/Grey Background */
-    --background: 224 71% 4%;
-    /* Very dark blue-ish grey */
-    --foreground: 210 40% 98%;
+    /* Base Colors - Dark Mode (Zinc-based) */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    /* Card & Surfaces - Slightly lighter than bg */
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    /* Card & Surfaces */
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
 
     /* Primary */
     --primary: 263 70% 50%;
-    /* Slightly darker purple for contrast */
     --primary-foreground: 210 40% 98%;
 
     /* Secondary */
-    --secondary: 217 19% 27%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
     /* Muted */
-    --muted: 217 19% 27%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
     /* Accent */
-    --accent: 217 19% 27%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
     /* Destructive */
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
     /* Borders */
-    --border: 217 19% 27%;
-    --input: 217 19% 27%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
     --ring: 263 70% 50%;
 
     /* Chart Colors Dark */

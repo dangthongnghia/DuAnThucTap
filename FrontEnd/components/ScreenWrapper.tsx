@@ -16,14 +16,18 @@ export function ScreenWrapper({
     safeArea = true,
     ...props
 }: ScreenWrapperProps) {
-    const Container = safeArea ? SafeAreaView : View;
-
     return (
         <View className={cn("flex-1 bg-background", bgClassName)}>
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-            <Container className={cn("flex-1", className)} {...props}>
-                {children}
-            </Container>
+            {safeArea ? (
+                <SafeAreaView className={cn("flex-1", className)} {...props}>
+                    {children}
+                </SafeAreaView>
+            ) : (
+                <View className={cn("flex-1", className)} {...props}>
+                    {children}
+                </View>
+            )}
         </View>
     );
 }
