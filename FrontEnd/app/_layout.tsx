@@ -17,10 +17,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { View, LogBox } from 'react-native';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
-// Suppress Reanimated reading from value warnings if they come from third-party libraries
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
-  strict: false, // Disable strict mode to suppress the render-phase warning
+  strict: false,
 });
 
 SplashScreen.preventAutoHideAsync();
