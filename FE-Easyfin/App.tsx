@@ -12,15 +12,31 @@ import HomeScreen from './screens/HomeScreen';
 import WalletScreen from './screens/WalletScreen'; 
 import OrdersScreen from './screens/OrdersScreen'; 
 import ProfileScreen from './screens/ProfileScreen';
+import CreateScreen from './screens/CreateScreen';
 
 const Tab = createBottomTabNavigator();
 
 // 1. Component TabBar (Thanh Menu tùy chỉnh của bạn)
 function FinanceTabBar({ state, descriptors, navigation }: any) {
+  // Lấy route đang active
+  const focusedRoute = state.routes[state.index];
+  const { options: focusedOptions } = descriptors[focusedRoute.key];
+
+  // Nếu route hiện tại là 'Create' (hoặc các màn khác bạn muốn ẩn menu), thì return null (ẩn TabBar)
+  // Bạn có thể mở rộng danh sách này, ví dụ: ['Create', 'Detail', ...].includes(focusedRoute.name)
+  if (['Create'].includes(focusedRoute.name)) {
+    return null;
+  }
+
   return (
     <View className="flex-row border-t-2 border-gray-100 bg-white pb-5 pt-3 shadow-lg">
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
+        
+        // Hide specific routes from the tab bar rendering list
+        // Những màn không muốn hiện nút bấm trên thanh bottom
+        if (['Create'].includes(route.name)) return null;
+
         const label = options.tabBarLabel ?? options.title ?? route.name;
         const isFocused = state.index === index;
 
@@ -77,6 +93,7 @@ export default function App() {
           <Tab.Screen name="Home" component={HomeScreen} />
           <Tab.Screen name="Wallet" component={WalletScreen} />
           <Tab.Screen name="Transaction" component={OrdersScreen} />
+          <Tab.Screen name="Create" component={CreateScreen} />
           <Tab.Screen name="Settings" component={ProfileScreen} />
         </Tab.Navigator>
       </NavigationContainer>
