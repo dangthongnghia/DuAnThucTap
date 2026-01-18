@@ -10,9 +10,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import HomeScreen from './screens/HomeScreen';
 // Nếu chưa có các màn này, bạn có thể tạo file hoặc thay tạm bằng HomeScreen để test
 import WalletScreen from './screens/WalletScreen'; 
-import OrdersScreen from './screens/OrdersScreen'; 
+import TransactionScreen from './screens/TransactionScreen'; 
 import ProfileScreen from './screens/ProfileScreen';
 import CreateScreen from './screens/CreateScreen';
+import ChatScreen from 'screens/ChatScreen';
+import BudgetScreen from 'screens/Budget';
 
 const Tab = createBottomTabNavigator();
 
@@ -55,8 +57,8 @@ function FinanceTabBar({ state, descriptors, navigation }: any) {
         let iconName = 'home';
         if (route.name === 'Home') iconName = 'home';
         else if (route.name === 'Wallet') iconName = 'wallet';
-        else if (route.name === 'Transaction') iconName = 'history';
-        else if (route.name === 'Settings') iconName = 'cog';
+        else if (route.name === 'Budget') iconName = 'history';
+        else if (route.name === 'Chat') iconName = 'chat';
 
         return (
           <TouchableOpacity
@@ -92,7 +94,8 @@ export default function App() {
         >
           <Tab.Screen name="Home" component={HomeScreen} />
           <Tab.Screen name="Wallet" component={WalletScreen} />
-          <Tab.Screen name="Transaction" component={OrdersScreen} />
+          <Tab.Screen name="Chat" component={ChatScreen} />
+          <Tab.Screen name="Budget" component={BudgetScreen} />
           <Tab.Screen name="Create" component={CreateScreen} />
           <Tab.Screen name="Settings" component={ProfileScreen} />
         </Tab.Navigator>
